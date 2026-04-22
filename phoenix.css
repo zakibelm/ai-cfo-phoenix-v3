@@ -1,0 +1,623 @@
+/* Phoenix Cabinet Agentique Theme Styles - Best Practices applied */
+
+/* Base Layout Modifications */
+.phoenix-layout {
+  min-height: 100vh;
+  background-color: var(--background);
+  color: var(--primary-text);
+  font-family: var(--font-sans);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+
+/* Top Header */
+.phoenix-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 4rem;
+  border-bottom: 1px solid var(--border-color);
+  animation: fadeIn 1s ease-out;
+}
+
+.phoenix-logo-area {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.phoenix-logo-box {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--accent-gold-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  color: var(--accent-gold);
+  font-size: 1.5rem;
+  transition: all 0.4s ease;
+}
+
+.phoenix-logo-box:hover {
+  background-color: rgba(203, 166, 96, 0.1);
+  box-shadow: 0 0 15px rgba(203, 166, 96, 0.2);
+}
+
+.phoenix-title-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.phoenix-title {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  color: #fff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.phoenix-subtitle {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--accent-gold);
+  margin-top: 0.2rem;
+}
+
+.phoenix-meta {
+  display: flex;
+  gap: 3rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--secondary-text);
+}
+
+.phoenix-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.phoenix-meta-label {
+  font-size: 0.65rem;
+  color: #555;
+  letter-spacing: 0.15em;
+}
+
+.phoenix-meta-value {
+  color: #ccc;
+}
+
+.phoenix-meta-value.highlight {
+  color: #fff;
+}
+
+/* Hero Section */
+.phoenix-hero {
+  padding: 4rem 4rem 3rem 4rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.phoenix-hero-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--accent-gold);
+  margin-bottom: 2rem;
+}
+
+.phoenix-hero-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 4rem;
+  flex-wrap: wrap; /* responsive wrap */
+}
+
+.phoenix-headline-block {
+  flex: 1;
+  min-width: 300px;
+}
+
+.phoenix-headline {
+  font-family: var(--font-heading);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  line-height: 1.1;
+  color: #fff;
+  font-weight: 400;
+  margin-bottom: 1.5rem;
+}
+
+.phoenix-headline span {
+  color: var(--accent-gold);
+  font-style: italic;
+}
+
+.phoenix-quote {
+  font-size: 0.9rem;
+  color: var(--accent-gold-dark);
+  font-style: italic;
+  max-width: 450px;
+  line-height: 1.6;
+}
+
+.phoenix-hero-desc {
+  flex: 0 0 350px;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--secondary-text);
+  font-style: italic;
+  padding-bottom: 1rem;
+}
+
+/* Agents Section */
+.phoenix-section {
+  padding: 4rem;
+}
+
+.phoenix-section-header {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.phoenix-section-num {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  color: var(--accent-gold);
+  font-style: italic;
+}
+
+.phoenix-section-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.phoenix-section-title {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  color: #fff;
+  font-weight: 400;
+}
+
+.phoenix-section-subtitle {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--secondary-text);
+}
+
+.phoenix-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
+}
+
+.phoenix-card {
+  padding: 2.5rem 2rem;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background-color: transparent;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.phoenix-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(203, 166, 96, 0.05) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 0;
+}
+
+.phoenix-card:hover {
+  background-color: rgba(10, 10, 12, 0.8);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border-color: rgba(203, 166, 96, 0.3);
+  z-index: 10;
+}
+
+.phoenix-card:hover::before {
+  opacity: 1;
+}
+
+.phoenix-card-top, .phoenix-card-content, .phoenix-card-status {
+  position: relative;
+  z-index: 1;
+}
+
+.phoenix-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.phoenix-card-num {
+  font-size: 0.75rem;
+  color: var(--accent-gold-dark);
+  font-style: italic;
+  font-family: var(--font-heading);
+}
+
+.phoenix-card-icon {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--secondary-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  color: var(--primary-text);
+  font-size: 1.1rem;
+  font-style: italic;
+  transition: all 0.3s ease;
+}
+
+.phoenix-card:hover .phoenix-card-icon {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.phoenix-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.phoenix-card-title {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  color: #fff;
+  transition: color 0.3s ease;
+}
+
+.phoenix-card-desc {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--secondary-text);
+  line-height: 1.5;
+}
+
+.phoenix-card-status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  color: var(--secondary-text);
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.phoenix-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #555;
+  transition: all 0.3s ease;
+}
+
+.phoenix-status-dot.active {
+  background-color: var(--accent-gold);
+  box-shadow: 0 0 8px var(--accent-gold);
+}
+
+.phoenix-status-dot.green {
+  background-color: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+}
+
+/* Integrate original app shell when phoenix is active */
+.phoenix-active .app-sidebar {
+  background-color: var(--card-background);
+  border-right: 1px solid var(--border-color);
+}
+.phoenix-active .sidebar-header .sidebar-title {
+  font-family: var(--font-heading);
+  color: var(--accent-gold);
+}
+.phoenix-active .sidebar-nav-item.active {
+  background-color: rgba(203, 166, 96, 0.1);
+  color: var(--accent-gold);
+}
+.phoenix-active .sidebar-nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+.phoenix-active .app-main {
+  padding: 0;
+}
+
+/* --- Section II: Le Registre --- */
+.registre-content {
+  display: flex;
+  gap: 4rem;
+  margin-top: 2rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 3rem;
+}
+
+.registre-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.registre-meta {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--secondary-text);
+  margin-bottom: 1rem;
+}
+
+.registre-title {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  color: #fff;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.registre-subtitle {
+  font-size: 0.9rem;
+  color: var(--secondary-text);
+  font-style: italic;
+  margin-bottom: 3rem;
+}
+
+.registre-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.registre-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.registre-stat-label {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--secondary-text);
+}
+
+.registre-stat-value {
+  color: #fff;
+}
+
+.registre-stat-value.gold {
+  color: var(--accent-gold);
+  font-style: italic;
+}
+
+.registre-stat-value.italic {
+  font-style: italic;
+  color: #ccc;
+}
+
+.registre-pipeline {
+  flex: 1.2;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1.5rem;
+  position: relative;
+  min-height: 300px;
+  background: radial-gradient(circle at 50% 50%, rgba(20,20,25,0.5), transparent);
+}
+
+.pipeline-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--accent-gold-dark);
+}
+
+.pipeline-graph {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 60%;
+}
+/* Note: For the actual graph SVG, we will render it inline in the component */
+
+/* --- Action Bar --- */
+.phoenix-action-bar-container {
+  padding: 0 4rem 4rem 4rem;
+}
+
+.phoenix-action-bar {
+  border: 1px solid var(--accent-gold-dark);
+  background-color: rgba(10, 10, 12, 0.8);
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.action-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.action-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-gold), var(--accent-gold-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--background);
+  font-size: 1.5rem;
+}
+
+.action-text-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.action-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--accent-gold);
+}
+
+.action-title {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  color: #fff;
+}
+
+.action-desc {
+  font-size: 0.85rem;
+  color: var(--secondary-text);
+  font-style: italic;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.btn-phoenix {
+  padding: 0.75rem 2rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  border: none;
+}
+
+.btn-phoenix-outline {
+  background: transparent;
+  color: var(--secondary-text);
+  border: 1px solid var(--border-color);
+}
+.btn-phoenix-outline:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.btn-phoenix-solid {
+  background: linear-gradient(135deg, #dfc686, #cba660);
+  color: var(--background);
+}
+.btn-phoenix-solid:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 15px rgba(203, 166, 96, 0.4);
+}
+
+/* --- Footer --- */
+.phoenix-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 2rem 4rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--secondary-text);
+}
+
+.footer-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.footer-links span::before {
+  content: '•';
+  margin-right: 0.5rem;
+  color: var(--accent-gold-dark);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .phoenix-header, .phoenix-hero, .phoenix-section {
+    padding: 2rem;
+  }
+  .phoenix-hero-content {
+    gap: 2rem;
+  }
+  .phoenix-hero-desc {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .phoenix-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+  .phoenix-meta {
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .phoenix-headline {
+    font-size: 2.5rem;
+  }
+  .phoenix-grid {
+    grid-template-columns: 1fr;
+    border-left: none;
+  }
+  .phoenix-card {
+    border-left: 1px solid var(--border-color);
+  }
+}

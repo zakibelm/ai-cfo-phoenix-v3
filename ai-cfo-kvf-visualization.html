@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>AI CFO Suite v2 — Adaptation KVF</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0c0c10;color:#e2e8f0;font-family:system-ui,sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.title-bar{padding:10px 16px 6px;font-size:13px;color:#a78bfa;font-weight:600;border-bottom:1px solid #1a1a2e;display:flex;justify-content:space-between;align-items:center}
+.title-bar small{color:#4b5563;font-size:10px;font-weight:400}
+.tab-bar{display:flex;gap:2px;padding:8px 16px 0;border-bottom:1px solid #1a1a2e;flex-shrink:0}
+.tab{padding:7px 15px;border-radius:6px 6px 0 0;cursor:pointer;font-size:12px;font-weight:500;color:#6b7280;background:#111118;border:1px solid #1a1a2e;border-bottom:none;transition:all .15s;user-select:none}
+.tab.on{color:#c4b5fd;background:#15101e;border-color:#5b21b6}
+.tab:hover:not(.on){color:#9ca3af}
+.panel{display:none;flex:1;overflow:hidden;position:relative}
+.panel.on{display:flex}
+#arch-panel{flex-direction:row}
+#arch-svg{flex:1;cursor:grab}
+#arch-svg:active{cursor:grabbing}
+.legend{position:absolute;top:14px;left:14px;background:rgba(12,12,16,.92);border:1px solid #1a1a2e;border-radius:8px;padding:10px 14px;font-size:11px;pointer-events:none}
+.legend h4{font-size:9px;font-weight:600;color:#4b5563;text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px}
+.li{display:flex;align-items:center;gap:7px;margin-bottom:5px;color:#6b7280}
+.ld{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.hint{position:absolute;bottom:14px;left:14px;font-size:10px;color:#2d3748}
+.dpanel{width:0;overflow:hidden;transition:width .25s;background:#0e0e13;border-left:1px solid #1a1a2e;flex-shrink:0}
+.dpanel.on{width:295px}
+.din{width:295px;padding:18px 15px}
+.dclose{float:right;cursor:pointer;color:#4b5563;font-size:13px;line-height:1;margin-top:2px}
+.dclose:hover{color:#9ca3af}
+.dtag{display:inline-block;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:2px 7px;border-radius:4px;margin-bottom:10px}
+.dname{font-size:14px;font-weight:600;color:#c4b5fd;margin-bottom:8px;line-height:1.3}
+.ddesc{font-size:11px;color:#6b7280;line-height:1.65}
+.drole{font-size:10px;color:#a78bfa;margin-top:8px;padding:6px 8px;background:#15101e;border-left:2px solid #7c3aed;border-radius:3px}
+#state-panel{overflow:auto;align-items:flex-start;padding:20px}
+#pipeline-panel{overflow-y:auto;padding:18px;align-content:flex-start;flex-wrap:wrap;gap:12px}
+.ac{background:#0f0f14;border:1px solid #1a1a2e;border-radius:10px;padding:14px;width:calc(50% - 6px);min-width:290px;border-top:2px solid}
+.ah{display:flex;align-items:flex-start;gap:9px;margin-bottom:11px}
+.ai{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;font-weight:700}
+.at{font-size:13px;font-weight:600;color:#c4b5fd}
+.ap{font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.akvf{font-size:10px;color:#fbbf24;margin-top:3px;padding:2px 6px;background:#1f1407;border:1px solid #92400e;border-radius:3px;display:inline-block}
+.iol{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;margin-top:9px}
+.ioi{font-size:11px;color:#6b7280;padding:2px 0 2px 7px;margin-bottom:2px;line-height:1.4}
+.ioi.in{border-left:2px solid #1e40af}
+.ioi.out{border-left:2px solid #7c3aed}
+.mt{display:flex;flex-wrap:wrap;gap:3px;margin-top:8px}
+.mb{font-size:9px;padding:2px 6px;border-radius:4px;background:#15101e;border:1px solid #4c1d95;color:#a78bfa}
+.eb{font-size:9px;padding:2px 7px;border-radius:4px;background:#071f14;border:1px solid #065f46;color:#34d399;margin-top:7px;display:inline-block}
+</style></head><body>
+
+<div class="title-bar">
+  <span>AI CFO Suite v2 — Adaptation ZAKI OS / KVF</span>
+  <small>v1.0 Draft · 10 agents CFO ré-affectés au pipeline · Mode Factory + Client</small>
+</div>
+
+<div class="tab-bar">
+  <div class="tab on" onclick="sw('arch')">🏗 Architecture</div>
+  <div class="tab" onclick="sw('state')">⚡ Machine d'états CFO</div>
+  <div class="tab" onclick="sw('pipeline')">🤖 10 Agents CFO — rôles KVF</div>
+  <div class="tab" onclick="sw('mapping')">🗺 Mapping rôles</div>
+</div>
+
+<div id="arch-panel" class="panel on">
+  <svg id="arch-svg"></svg>
+  <div class="legend">
+    <h4>Légende</h4>
+    <div class="li"><div class="ld" style="background:#7c3aed"></div>Agents CFO</div>
+    <div class="li"><div class="ld" style="background:#1d4ed8"></div>Orchestration (Z-Kernel)</div>
+    <div class="li"><div class="ld" style="background:#0e7490"></div>LLM / Providers</div>
+    <div class="li"><div class="ld" style="background:#065f46"></div>Stockage</div>
+    <div class="li"><div class="ld" style="background:#92400e"></div>Artefacts vault</div>
+    <div class="li"><div class="ld" style="background:#9f1239"></div>Humain (CPA)</div>
+  </div>
+  <div class="hint">Scroll: zoom · Drag: déplacer · Clic: détails (rôle KVF + mission)</div>
+  <div class="dpanel" id="dpanel">
+    <div class="din">
+      <span class="dclose" onclick="closeDp()">✕</span>
+      <div class="dtag" id="dtag"></div>
+      <div class="dname" id="dname"></div>
+      <div class="ddesc" id="ddesc"></div>
+      <div class="drole" id="drole"></div>
+    </div>
+  </div>
+</div>
+
+<div id="state-panel" class="panel">
+  <svg id="state-svg"></svg>
+</div>
+
+<div id="pipeline-panel" class="panel"></div>
+
+<div id="mapping-panel" class="panel" style="overflow-y:auto;padding:24px;flex-direction:column"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+// ── TABS ──────────────────────────────────
+const TIDS=['arch','state','pipeline','mapping'];
+function sw(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',TIDS[i]===n));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById(n+'-panel').classList.add('on');
+  if(n==='mapping') initMapping();
+}
+
+// ── ARCH DATA — AI CFO + KVF roles ─────────
+const CC={agent:'#7c3aed',orch:'#1d4ed8',llm:'#0e7490',store:'#065f46',out:'#92400e',human:'#9f1239'};
+const CL={agent:'Agent CFO',orch:'Orchestration',llm:'LLM / Provider',store:'Stockage',out:'Artefact',human:'Humain (CPA)'};
+
+const ND=[
+  // Orchestration
+  {id:'fa',label:'FastAPI',sub:'Backend',cat:'orch',r:28,desc:'backend/main.py + nouveau backend/z_kernel.py · Endpoint POST /api/cfo-kf/launch · machine d\'états Z-Kernel CFO · monitoring budget/temps · log Decisions.md',role:'Orchestrateur central — équivalent n8n KVF en Python natif'},
+  {id:'zk',label:'Z-Kernel',sub:'Gouvernance',cat:'orch',r:24,desc:'Machine 17 états (16 KVF + COMPLIANCE_CHECK) · budget monitor · quality governance · PostgreSQL · cfo_runs + cfo_steps · EVV pattern + transitions automatiques + plafond escalade',role:'Identique KVF + 1 état finance-specific'},
+
+  // LLM
+  {id:'or',label:'OpenRouter',sub:'Multi-LLM',cat:'llm',r:24,desc:'Routing multi-modèles déjà intégré dans services/geminiClient.ts · Claude 3.5 Sonnet · GPT-4 Turbo · Llama 3.1 70b · Gemini 2.5 Pro · fallback hiérarchique',role:'Réutilisation directe — pas de changement'},
+  {id:'gem',label:'Gemini',sub:'Validate EVV',cat:'llm',r:18,desc:'Gemini 2.0 Flash via services/geminiService.ts · principalement utilisé comme validateur EVV (≠ rédacteur) pour éviter l\'auto-validation',role:'Modèle validateur principal du pattern EVV'},
+  {id:'hf',label:'HF API',sub:'Embeddings',cat:'llm',r:18,desc:'Hugging Face Inference API · intfloat/multilingual-e5-large · 1024 dims · même provider que KVF · cohérence avec stack ZAKI OS',role:'Embeddings · figés au BOOTSTRAPPING'},
+  {id:'ol',label:'Ollama',sub:'Local CPA',cat:'llm',r:17,desc:'Fallback local · qwen2.5-coder:7b · OBLIGATOIRE pour SENSIBILITE = confidentiel-client (Loi 25 + secret professionnel CPA) · zéro export cloud',role:'Mode confidentiel-client uniquement'},
+
+  // Agents CFO ré-affectés
+  {id:'cfo',label:'CFO',sub:'Orchestrateur',cat:'agent',r:28,desc:'Le CFO ne rédige PAS dans le pipeline Factory. Il pilote : sélection d\'agent, routage modèle, monitoring budget, déclenchement checkpoints. En Playground, mode chat natif inchangé.',role:'KVF: Orchestrator (n8n+Z-Kernel)'},
+  {id:'fin',label:'FinanceAgent',sub:'Planner',cat:'agent',r:22,desc:'Phase MAPPING · génère Plan-Analyse.md · 8 types finance (concept, règle, procédure, cas-type, critique, modèle-calcul, synthèse, page-pont) · priorités 1-5 · alertes fact-check · pages-ponts inter-domaines',role:'KVF: ClusterPlanner'},
+  {id:'tax',label:'TaxAgent',sub:'FactCheck+Writer fiscal',cat:'agent',r:23,desc:'DOUBLE RÔLE — (1) FactCheck spécialisé fiscal : vérifie LIR/LTVQ/LIQ + bulletins CRA/ARQ. (2) VaultWriter pour pages type "règle" et "cas-type" fiscal · min 700 mots · citation exacte des articles',role:'KVF: FactCheckAgent (fiscal) + VaultWriter (fiscal)'},
+  {id:'acc',label:'AccountingAgent',sub:'FactCheck+Linker',cat:'agent',r:22,desc:'DOUBLE RÔLE séquentiel — (1) FactCheck comptable : équilibre débit/crédit + NCECF/IFRS. (2) LinkerAgent : optimise les liens inter-pages avec score adapté CFO (sem 0.40 + lex 0.25 + domain 0.20 + norm_overlap 0.10 + opp 0.05)',role:'KVF: FactCheckAgent (comptable) + LinkerAgent'},
+  {id:'aud',label:'AuditAgent',sub:'FactCheck général',cat:'agent',r:21,desc:'FactCheck général : entités non-fiscales (noms, dates, statistiques, citations, institutions) · niveaux risque finance-specific · jamais "verified" par défaut · contribue au COMPLIANCE_CHECK final',role:'KVF: FactCheckAgent (général)'},
+  {id:'inv',label:'InvestmentAgent',sub:'Writer investissement',cat:'agent',r:20,desc:'VaultWriter spécialisé pages "modèle-calcul" investissement : VAN, TRI, payback, allocation de capital · taux d\'actualisation toujours motivé · analyse de sensibilité 3 scénarios · clause de non-conseil',role:'KVF: VaultWriter (spécialisé investissement)'},
+  {id:'com',label:'CommsAgent',sub:'Writer principal',cat:'agent',r:24,desc:'VaultWriter principal — rédige toutes les pages non-spécialisées · min 800 mots · ≥6 liens [[...]] contextuels · ton CPA professionnel + pédagogique · anti-hallucination strict · "(à confirmer)" pour chiffres incertains',role:'KVF: VaultWriter (principal)'},
+  {id:'der',label:'DerivativePricing',sub:'Writer dérivés',cat:'agent',r:19,desc:'VaultWriter spécialisé pages "modèle-calcul" dérivés : Black-Scholes, binomial, Monte Carlo, Greeks (Delta/Gamma/Vega/Theta/Rho) · justification du choix de modèle · limites explicites',role:'KVF: VaultWriter (spécialisé dérivés)'},
+  {id:'sup',label:'SupervisorAgent',sub:'Audit + Compliance',cat:'agent',r:23,desc:'DOUBLE RÔLE séquentiel — (1) AuditAgent KVF : détection contradictions inter-pages CRITIQUE/MAJEUR/MINEUR · pgvector cosine 0.75-0.90. (2) COMPLIANCE_CHECK : check-list 7 points finance-specific (PII, taux, articles, audit-grade, mention CPA, dates versions, normes)',role:'KVF: AuditAgent + nouveau COMPLIANCE_CHECK'},
+  {id:'fc',label:'ForecastAgent',sub:'Debrief',cat:'agent',r:20,desc:'Phase DEBRIEFING · synthèse métriques réelles vs objectifs · KPI clé "coût par page validable CPA" · projections ×5 ×10 ×20 · recommandations paramètres mode Production · score qualité global vault 1-10',role:'KVF: DebriefAgent'},
+
+  // Stockage
+  {id:'sb',label:'Supabase',sub:'+ pgvector',cat:'store',r:24,desc:'Tables nouvelles cfo_runs · cfo_steps · cfo_pages (préfixées cfo_ pour zéro collision avec schéma RAG existant) · VECTOR(1024) cosine · find_similar_cfo_pages() · IVFFlat nlist=100 · regulatory_refs GIN index',role:'Extension du schéma existant'},
+  {id:'fs',label:'Filesystem',sub:'Workspace',cat:'store',r:18,desc:'workspace/cfo-vaults/{run_id}/ (mode factory) ou workspace/cfo-clients/{client_id}/{run_id}/ (mode client) · pages/*.md · 99-Meta/ · 98-Index/ · retry ×2 délai exponentiel',role:'Vault sortie — compatible Obsidian'},
+
+  // Artefacts
+  {id:'pm',label:'Plan-Analyse',sub:'Artefact',cat:'out',r:13,desc:'Plan structuré du mandat · NB_PAGES_CIBLE entrées · 8 types finance + priorités + alertes FC + références attendues (articles, bulletins) · base checkpoint CP1 humain',role:'Produit par FinanceAgent'},
+  {id:'vp',label:'cfo_pages',sub:'Artefact',cat:'out',r:15,desc:'Pages financières .md · YAML enrichi (titre, type, statut, regulatory_refs, fiscal_year, compliance_pass) · liens [[...]] contextuels · quality_score · embedding_id · review_status',role:'Produit par les Writers (CommsAgent + spécialistes)'},
+  {id:'fl',label:'FactCheck-Log',sub:'Artefact',cat:'out',r:13,desc:'Journal complet vérifications · entités classées par agent (AuditAgent général, TaxAgent fiscal, AccountingAgent comptable) · statuts verified/to-verify/debated/invented · fact_check_level par page',role:'Produit par AuditAgent + TaxAgent + AccountingAgent'},
+  {id:'am',label:'Audit.md',sub:'Artefact',cat:'out',r:13,desc:'Anomalies CRITIQUES/MAJEURS/MINEURS · contradictions détectées (4 types) · doublons sémantiques · recommandations priorisées · politique "jamais auto-corriger"',role:'Produit par SupervisorAgent (mode Audit)'},
+  {id:'cm',label:'Compliance',sub:'Artefact',cat:'out',r:13,desc:'Compliance-Check.md · check-list 7 points : no_pii, fiscal_rates_coherent, law_articles_exact, no_audit_grade_invented, cpa_mention, law_versions_dates, norms_exist · doit être 100% true pour COMPLETED',role:'Produit par SupervisorAgent (mode Compliance)'},
+  {id:'rs',label:'Run-Stats',sub:'Artefact',cat:'out',r:13,desc:'CFO-Run-Stats.json · métriques complètes · coûts par agent · timing par phase · KPI "coût par page validable CPA" · contradictions · compliance · agents_used avec role_kvf',role:'Produit par ForecastAgent'},
+
+  // Humain
+  {id:'cpa',label:'CPA',sub:'Validateur',cat:'human',r:21,desc:'Le CPA responsable du mandat · valide CP1 (plan d\'analyse) et CP2 (pilote 6 pages) · résout manuellement les contradictions CRITIQUES · décide GO/CORRIGE/AJUSTE/STOP',role:'Décideur final — responsabilité professionnelle'},
+  {id:'c1',label:'CP1',sub:'Validation Plan',cat:'human',r:16,desc:'Validation du Plan-Analyse.md produit par FinanceAgent · GO/CORRIGE/STOP · obligatoire en mode Pilot · déclenche PILOT_WRITING',role:'Checkpoint humain 1'},
+  {id:'c2',label:'CP2',sub:'Validation Pilot',cat:'human',r:16,desc:'Validation des 6 pages pilotes · métriques qualité + coût + EVV affichés · GO/AJUSTE/STOP · obligatoire en mode Pilot · déclenche FULL_WRITING',role:'Checkpoint humain 2'},
+  {id:'ui',label:'Factory.tsx',sub:'UI React',cat:'human',r:18,desc:'Nouvelle page React (pages/Factory.tsx) · formulaire de lancement · AgentCheckboxSelector pour activer/désactiver agents · vue détail run en cours · affichage CP1/CP2 via Banner+Toast',role:'Interface du module dans la suite'},
+];
+
+const LK=[
+  // FastAPI orchestre tous les agents
+  {s:'fa',t:'cfo',l:'route'},{s:'fa',t:'fin',l:'route'},{s:'fa',t:'tax',l:'route'},
+  {s:'fa',t:'acc',l:'route'},{s:'fa',t:'com',l:'route'},{s:'fa',t:'aud',l:'route'},
+  {s:'fa',t:'sup',l:'route'},{s:'fa',t:'fc',l:'route'},{s:'fa',t:'inv',l:'route'},{s:'fa',t:'der',l:'route'},
+  {s:'fa',t:'zk',l:'état+budget'},{s:'fa',t:'ui',l:'notifications'},
+  {s:'zk',t:'sb',l:'persiste'},
+
+  // CFO orchestre les autres agents (logique métier)
+  {s:'cfo',t:'fin',l:'délègue'},{s:'cfo',t:'com',l:'délègue'},
+
+  // Agents → LLM
+  {s:'cfo',t:'or',l:'LLM'},{s:'fin',t:'or',l:'LLM'},{s:'com',t:'or',l:'LLM'},
+  {s:'tax',t:'or',l:'LLM'},{s:'acc',t:'or',l:'LLM'},{s:'inv',t:'or',l:'LLM'},
+  {s:'der',t:'or',l:'LLM'},{s:'aud',t:'or',l:'LLM'},{s:'sup',t:'or',l:'LLM'},{s:'fc',t:'or',l:'LLM'},
+  {s:'or',t:'gem',l:'EVV validate'},
+  {s:'or',t:'ol',l:'fallback CPA'},
+
+  // Embeddings
+  {s:'hf',t:'sb',l:'embed 1024d'},{s:'ol',t:'sb',l:'embed local'},
+
+  // Linker / Audit utilisent pgvector
+  {s:'acc',t:'sb',l:'similarity'},{s:'sup',t:'sb',l:'doublons'},
+
+  // Production des artefacts
+  {s:'fin',t:'pm',l:'génère'},
+  {s:'com',t:'vp',l:'rédige'},{s:'tax',t:'vp',l:'rédige fiscal'},{s:'inv',t:'vp',l:'rédige'},{s:'der',t:'vp',l:'rédige'},
+  {s:'aud',t:'fl',l:'log général'},{s:'tax',t:'fl',l:'log fiscal'},{s:'acc',t:'fl',l:'log compta'},
+  {s:'sup',t:'am',l:'génère'},{s:'sup',t:'cm',l:'compliance'},
+  {s:'fc',t:'rs',l:'génère'},
+
+  // Pages → filesystem + DB
+  {s:'vp',t:'fs',l:'écrit .md'},{s:'vp',t:'sb',l:'indexées'},
+
+  // FactCheck → Writer (résultats)
+  {s:'aud',t:'com',l:'FC results'},{s:'tax',t:'com',l:'FC fiscal'},
+
+  // Humain
+  {s:'ui',t:'cpa',l:'sollicite'},
+  {s:'cpa',t:'c1',l:'décide'},{s:'cpa',t:'c2',l:'décide'},
+  {s:'c1',t:'fa',l:'GO/STOP'},{s:'c2',t:'fa',l:'GO/STOP'},
+];
+
+// ── FORCE GRAPH ────────────────────────────
+function initArch(){
+  const ap=document.getElementById('arch-panel');
+  const W=ap.clientWidth,H=ap.clientHeight;
+  const svg=d3.select('#arch-svg').attr('width','100%').attr('height',H);
+  svg.selectAll('*').remove();
+
+  const defs=svg.append('defs');
+  defs.append('marker').attr('id','ma').attr('markerWidth',7).attr('markerHeight',5)
+    .attr('refX',6).attr('refY',2.5).attr('orient','auto')
+    .append('polygon').attr('points','0 0,7 2.5,0 5').attr('fill','#2d3748');
+
+  const bgG=svg.append('g').attr('opacity',.35);
+  for(let x=0;x<W;x+=80) bgG.append('line').attr('x1',x).attr('y1',0).attr('x2',x).attr('y2',H).attr('stroke','#111827').attr('stroke-width',.5);
+  for(let y=0;y<H;y+=80) bgG.append('line').attr('x1',0).attr('y1',y).attr('x2',W).attr('y2',y).attr('stroke','#111827').attr('stroke-width',.5);
+
+  const gN=ND.map(n=>({...n}));
+  const gL=LK.map(l=>({source:l.s,target:l.t,label:l.l}));
+  const ip={orch:{x:W*.40,y:H*.30},llm:{x:W*.68,y:H*.25},agent:{x:W*.30,y:H*.65},store:{x:W*.75,y:H*.65},out:{x:W*.88,y:H*.40},human:{x:W*.13,y:H*.30}};
+  gN.forEach(n=>{const p=ip[n.cat];n.x=p.x+(Math.random()-.5)*100;n.y=p.y+(Math.random()-.5)*100;});
+
+  const sim=d3.forceSimulation(gN)
+    .force('link',d3.forceLink(gL).id(d=>d.id).distance(d=>{const tc=d.target.cat;return tc==='out'?80:tc==='human'?95:115;}).strength(.3))
+    .force('charge',d3.forceManyBody().strength(d=>d.cat==='out'?-130:-340))
+    .force('center',d3.forceCenter(W/2,H/2))
+    .force('collide',d3.forceCollide(d=>d.r+22));
+
+  const g=svg.append('g');
+  svg.call(d3.zoom().scaleExtent([.25,4]).on('zoom',e=>g.attr('transform',e.transform)));
+
+  const lG=g.append('g');
+  const lS=lG.selectAll('.lk').data(gL).join('g');
+  const lL=lS.append('line')
+    .attr('stroke',d=>{const sc=typeof d.source==='object'?d.source.cat:null;return sc==='agent'?'#4c1d95':sc==='human'?'#7f1d1d':sc==='orch'?'#1e3a8a':'#1e293b';})
+    .attr('stroke-width',d=>{const sc=typeof d.source==='object'?d.source.cat:null;return sc==='orch'?2:1.5;})
+    .attr('stroke-opacity',.65).attr('marker-end','url(#ma)');
+  const lTx=lS.append('text').attr('font-size',8).attr('fill','#374151').attr('text-anchor','middle').text(d=>d.label);
+
+  const nG=g.append('g').selectAll('.ng').data(gN).join('g').style('cursor','pointer')
+    .call(d3.drag()
+      .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;})
+      .on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}))
+    .on('click',(e,d)=>{e.stopPropagation();showDp(d);});
+
+  nG.append('circle').attr('r',d=>d.r+9).attr('fill',d=>CC[d.cat]).attr('opacity',.1);
+  nG.append('circle').attr('r',d=>d.r).attr('fill',d=>CC[d.cat]).attr('fill-opacity',.15)
+    .attr('stroke',d=>CC[d.cat]).attr('stroke-width',1.5)
+    .on('mouseover',function(){d3.select(this).attr('fill-opacity',.3);})
+    .on('mouseout',function(){d3.select(this).attr('fill-opacity',.15);});
+  nG.append('text').attr('text-anchor','middle').attr('font-size',d=>d.r>=22?10:9).attr('font-weight','600')
+    .attr('fill','#e2e8f0').attr('dy',d=>d.r>=23?-2:3).text(d=>d.label);
+  nG.filter(d=>d.r>=18).append('text').attr('text-anchor','middle').attr('font-size',8)
+    .attr('fill',d=>CC[d.cat]).attr('dy',d=>d.r>=23?11:12).text(d=>d.sub);
+  svg.on('click',()=>closeDp());
+
+  sim.on('tick',()=>{
+    lL.attr('x1',d=>{const dx=d.target.x-d.source.x,dy=d.target.y-d.source.y,di=Math.sqrt(dx*dx+dy*dy)||1;return d.source.x+dx/di*(d.source.r+3);})
+      .attr('y1',d=>{const dx=d.target.x-d.source.x,dy=d.target.y-d.source.y,di=Math.sqrt(dx*dx+dy*dy)||1;return d.source.y+dy/di*(d.source.r+3);})
+      .attr('x2',d=>{const dx=d.target.x-d.source.x,dy=d.target.y-d.source.y,di=Math.sqrt(dx*dx+dy*dy)||1;return d.target.x-dx/di*(d.target.r+9);})
+      .attr('y2',d=>{const dx=d.target.x-d.source.x,dy=d.target.y-d.source.y,di=Math.sqrt(dx*dx+dy*dy)||1;return d.target.y-dy/di*(d.target.r+9);});
+    lTx.attr('x',d=>(d.source.x+d.target.x)/2).attr('y',d=>(d.source.y+d.target.y)/2-3);
+    nG.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+}
+
+function showDp(d){
+  const p=document.getElementById('dpanel'),tg=document.getElementById('dtag');
+  document.getElementById('dname').textContent=d.label+(d.sub&&d.sub!==d.label?' — '+d.sub:'');
+  document.getElementById('ddesc').textContent=d.desc;
+  document.getElementById('drole').textContent=d.role||'';
+  tg.textContent=CL[d.cat];
+  tg.style.cssText=`background:${CC[d.cat]}22;color:${CC[d.cat]};border:1px solid ${CC[d.cat]}44;display:inline-block;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:2px 7px;border-radius:4px;margin-bottom:10px`;
+  p.classList.add('on');
+}
+function closeDp(){document.getElementById('dpanel').classList.remove('on');}
+
+// ── STATE MACHINE — CFO version (17 états avec COMPLIANCE_CHECK) ─────
+function initState(){
+  const sv=document.getElementById('state-svg');
+  const W=1180,H=460;
+  sv.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  sv.setAttribute('width',W); sv.setAttribute('height',H);
+  const bw=42,bh=15;
+  const S={
+    PLANNED:    {x:75,  y:82,  c:'#374151',tc:'#9ca3af',l:['PLANNED']},
+    BOOT:       {x:215, y:82,  c:'#374151',tc:'#9ca3af',l:['BOOTSTRAP']},
+    MAPPING:    {x:365, y:82,  c:'#1d4ed8',tc:'#93c5fd',l:['MAPPING']},
+    WCP1:       {x:510, y:82,  c:'#92400e',tc:'#fbbf24',l:['WAIT','CP1']},
+    PILOT_W:    {x:75,  y:222, c:'#6d28d9',tc:'#c4b5fd',l:['PILOT','WRITING']},
+    PILOT_QA:   {x:200, y:222, c:'#6d28d9',tc:'#c4b5fd',l:['PILOT','QA']},
+    WCP2:       {x:325, y:222, c:'#92400e',tc:'#fbbf24',l:['WAIT','CP2']},
+    FULL_W:     {x:450, y:222, c:'#065f46',tc:'#6ee7b7',l:['FULL','WRITING']},
+    LINKING:    {x:560, y:222, c:'#065f46',tc:'#6ee7b7',l:['LINKING']},
+    AUDITING:   {x:670, y:222, c:'#065f46',tc:'#6ee7b7',l:['AUDITING']},
+    COMPL:      {x:785, y:222, c:'#0e7490',tc:'#67e8f9',l:['COMPL.','CHECK']},
+    DEBRIEF:    {x:900, y:222, c:'#065f46',tc:'#6ee7b7',l:['DEBRIEF']},
+    DONE:       {x:1015,y:222, c:'#065f46',tc:'#6ee7b7',l:['COMPLETED']},
+    DONE_WW:    {x:1015,y:355, c:'#92400e',tc:'#fcd34d',l:['COMPL','+ WARNS']},
+    RETRY:      {x:215, y:380, c:'#7f1d1d',tc:'#fca5a5',l:['RETRYING']},
+    WAIT_H:     {x:365, y:380, c:'#7f1d1d',tc:'#fca5a5',l:['WAIT','HUMAN']},
+    FAILED:     {x:510, y:380, c:'#7f1d1d',tc:'#f87171',l:['FAILED']},
+  };
+  const TR=[
+    {f:'PLANNED', t:'BOOT',    c:'#4b5563'},
+    {f:'BOOT',    t:'MAPPING', c:'#4b5563'},
+    {f:'MAPPING', t:'WCP1',    c:'#4b5563', l:'Plan ✓'},
+    {f:'WCP1', t:'PILOT_W', c:'#059669', l:'GO',   p:`M510,97 L510,152 L75,152 L75,207`,lx:290,ly:147},
+    {f:'WCP1', t:'MAPPING', c:'#d97706', l:'CORRIGE', p:`M510,67 Q438,44 365,67`,lx:438,ly:46},
+    {f:'WCP1', t:'FAILED',  c:'#dc2626', l:'STOP', p:`M510,97 L527,97 L527,365`,lx:535,ly:230},
+    {f:'PILOT_W',  t:'PILOT_QA', c:'#4b5563'},
+    {f:'PILOT_QA', t:'WCP2',     c:'#4b5563', l:'≥7.5'},
+    {f:'WCP2',     t:'FULL_W',   c:'#059669', l:'GO'},
+    {f:'FULL_W',   t:'LINKING',  c:'#4b5563'},
+    {f:'LINKING',  t:'AUDITING', c:'#4b5563'},
+    {f:'AUDITING', t:'COMPL',    c:'#4b5563', l:'audit ✓'},
+    {f:'COMPL',    t:'DEBRIEF',  c:'#0e7490', l:'7/7 ✓'},
+    {f:'DEBRIEF',  t:'DONE',     c:'#059669', l:'✓'},
+    {f:'DONE',     t:'DONE_WW',  c:'#d97706', l:'warnings'},
+    {f:'COMPL',    t:'WAIT_H',   c:'#dc2626', l:'check FAIL', p:`M785,237 Q575,310 365,365`,lx:580,ly:310},
+    {f:'WCP2', t:'PILOT_W', c:'#d97706', l:'AJUSTE', p:`M325,207 Q200,180 75,207`,lx:200,ly:182},
+    {f:'WCP2', t:'FAILED',  c:'#dc2626', l:'STOP',   p:`M325,237 Q420,300 510,365`,lx:425,ly:300},
+    {f:'MAPPING', t:'RETRY',  c:'#dc2626', l:'score<6',  p:`M365,97 Q295,240 215,365`,lx:315,ly:230},
+    {f:'RETRY',   t:'MAPPING',c:'#d97706', l:'retry',    p:`M173,380 L148,380 L148,52 L365,52 L365,67`,lx:260,ly:46},
+    {f:'FULL_W',    t:'WAIT_H', c:'#dc2626', l:'budget<5%', p:`M450,237 L450,300 L365,300 L365,365`,lx:407,ly:304},
+    {f:'PILOT_QA',  t:'WAIT_H', c:'#dc2626', l:'score×2',   p:`M200,237 L200,330 L365,330 L365,365`,lx:283,ly:334},
+    {f:'WAIT_H', t:'FAILED', c:'#dc2626', l:'abandon'},
+  ];
+
+  const markerColors={'#4b5563':'gray','#059669':'green','#dc2626':'red','#d97706':'orange','#0e7490':'cyan'};
+  let html=`<rect width="${W}" height="${H}" fill="#0c0c10"/>
+<defs>
+<marker id="ma-gray" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4b5563"/></marker>
+<marker id="ma-green" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#059669"/></marker>
+<marker id="ma-red" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#dc2626"/></marker>
+<marker id="ma-orange" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#d97706"/></marker>
+<marker id="ma-cyan" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#0e7490"/></marker>
+</defs>
+<rect x="32" y="58" width="${W-64}" height="${bh*2+44}" rx="5" fill="#0f0f14"/>
+<rect x="32" y="198" width="${W-64}" height="${bh*2+44}" rx="5" fill="#0f0f14"/>
+<rect x="32" y="355" width="556" height="${bh*2+44}" rx="5" fill="#0f0f14"/>
+<text x="20" y="86" font-size="9" fill="#2d3748" text-anchor="middle" transform="rotate(-90,20,86)">Init</text>
+<text x="20" y="226" font-size="9" fill="#2d3748" text-anchor="middle" transform="rotate(-90,20,226)">Production</text>
+<text x="20" y="382" font-size="9" fill="#2d3748" text-anchor="middle" transform="rotate(-90,20,382)">Erreurs</text>
+<text x="785" y="265" text-anchor="middle" font-size="9" fill="#67e8f9" font-style="italic">★ NOUVEL ÉTAT FINANCE-SPECIFIC</text>`;
+
+  TR.forEach(tr=>{
+    const f=S[tr.f],t=S[tr.t];
+    let d=tr.p;
+    if(!d){
+      const dx=t.x-f.x,dy=t.y-f.y;
+      let sx,sy,ex,ey;
+      if(Math.abs(dx)>=Math.abs(dy)){sx=f.x+(dx>0?bw:-bw);sy=f.y;ex=t.x+(dx>0?-bw:bw);ey=t.y;}
+      else{sx=f.x;sy=f.y+(dy>0?bh:-bh);ex=t.x;ey=t.y+(dy>0?-bh:bh);}
+      d=`M${sx},${sy} L${ex},${ey}`;
+    }
+    const mid=markerColors[tr.c]||'gray';
+    html+=`<path d="${d}" fill="none" stroke="${tr.c}" stroke-width="1.5" stroke-opacity=".8" marker-end="url(#ma-${mid})"/>`;
+    if(tr.l){
+      let lx=tr.lx,ly=tr.ly;
+      if(lx===undefined){
+        const f2=S[tr.f],t2=S[tr.t],dx2=t2.x-f2.x,dy2=t2.y-f2.y;
+        const absDx=Math.abs(dx2),absDy=Math.abs(dy2);
+        let sx,sy,ex,ey;
+        if(absDx>=absDy){sx=f2.x+(dx2>0?bw:-bw);sy=f2.y;ex=t2.x+(dx2>0?-bw:bw);ey=t2.y;}
+        else{sx=f2.x;sy=f2.y+(dy2>0?bh:-bh);ex=t2.x;ey=t2.y+(dy2>0?-bh:bh);}
+        lx=(sx+ex)/2;ly=(sy+ey)/2-4;
+      }
+      html+=`<rect x="${lx-26}" y="${ly-10}" width="52" height="14" rx="3" fill="#0c0c10"/>
+<text x="${lx}" y="${ly+1}" text-anchor="middle" font-size="9" fill="${tr.c}" font-weight="500">${tr.l}</text>`;
+    }
+  });
+
+  Object.values(S).forEach(s=>{
+    html+=`<rect x="${s.x-bw}" y="${s.y-bh}" width="${bw*2}" height="${bh*2}" rx="5" fill="${s.c}20" stroke="${s.c}" stroke-width="1.5"/>`;
+    const ll=s.l;
+    if(ll.length===1) html+=`<text x="${s.x}" y="${s.y+1}" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="600" fill="${s.tc}">${ll[0]}</text>`;
+    else{
+      html+=`<text x="${s.x}" y="${s.y-4}" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="600" fill="${s.tc}">${ll[0]}</text>`;
+      html+=`<text x="${s.x}" y="${s.y+6}" text-anchor="middle" dominant-baseline="central" font-size="8" fill="${s.tc}" opacity=".85">${ll[1]}</text>`;
+    }
+  });
+
+  html+=`<g>
+<text x="668" y="395" font-size="9" font-weight="600" fill="#4b5563">Transitions</text>
+<line x1="668" y1="408" x2="702" y2="408" stroke="#059669" stroke-width="2"/><text x="708" y="411" font-size="9" fill="#6b7280">GO / Validation</text>
+<line x1="668" y1="421" x2="702" y2="421" stroke="#dc2626" stroke-width="2"/><text x="708" y="424" font-size="9" fill="#6b7280">Erreur / STOP</text>
+<line x1="668" y1="434" x2="702" y2="434" stroke="#d97706" stroke-width="2"/><text x="708" y="437" font-size="9" fill="#6b7280">Correction</text>
+<line x1="668" y1="447" x2="702" y2="447" stroke="#0e7490" stroke-width="2"/><text x="708" y="450" font-size="9" fill="#6b7280">Compliance CFO</text>
+</g>`;
+
+  sv.innerHTML=html;
+}
+
+// ── PIPELINE — 10 agents CFO avec rôle KVF ─
+const AG=[
+  {name:'CFO',phase:'Orchestrateur Z-Kernel',kvf:'KVF: Orchestrator (n8n+Z-Kernel)',icon:'◆',c:'#7c3aed',
+   models:['Décide selon router multi-LLM','Pas d\'appel LLM direct (logique)'],
+   evv:'Pas de rédaction · pilote le pipeline · log Decisions.md',
+   ins:['État courant cfo_runs.status','Métriques cumulées (budget, temps, qualité)','Paramètres initiaux du run'],
+   outs:['Prochaine transition d\'état','Choix d\'agent + modèle pour la tâche','Notifications checkpoints CP1/CP2']},
+  {name:'FinanceAgent',phase:'Phase MAPPING',kvf:'KVF: ClusterPlanner',icon:'◈',c:'#1d4ed8',
+   models:['gemini-2.0-flash (rapide)','claude-3.5-sonnet (complexe)'],
+   evv:'EVV seuil: 7.0 · validateur: Gemini Flash',
+   ins:['DOMAINE + MANDAT + DESCRIPTION','NB_PAGES_CIBLE · NIVEAU_RIGUEUR','OBJECTIF_VAULT + run_context'],
+   outs:['Plan-Analyse.md — entrées typées','8 types finance (concept, règle, procédure, cas-type, critique, modèle-calcul, synthèse, page-pont)','Pages-ponts inter-domaines']},
+  {name:'TaxAgent',phase:'FactCheck fiscal + VaultWriter fiscal',kvf:'KVF: FactCheck (fiscal) + VaultWriter (fiscal)',icon:'◇',c:'#eab308',
+   models:['llama-3.1-70b (FactCheck)','claude-3.5-sonnet (Writer audit-grade)'],
+   evv:'Output JSON FactCheck + .md règle/cas-type · ≥700 mots',
+   ins:['Texte / page à vérifier','Articles LIR/LTVQ/LIQ + bulletins CRA/ARQ','Plan entry pour rédaction (si Writer)'],
+   outs:['Statuts entités fiscales (verified/to-verify/debated/invented)','fact_check_level=deep si article cité','Page .md fiscal avec citation exacte + référence']},
+  {name:'AccountingAgent',phase:'FactCheck comptable + LINKING',kvf:'KVF: FactCheck (comptable) + LinkerAgent',icon:'⊞',c:'#06b6d4',
+   models:['claude-3.5-sonnet (les deux modes)'],
+   evv:'Score lien: 0.40 sem + 0.25 lex + 0.20 dom + 0.10 norm + 0.05 opp · ≥0.55',
+   ins:['Écritures à vérifier (équilibre D/C)','Normes NCECF/IFRS citées','Toutes pages .md du vault (mode Linker)'],
+   outs:['Validation équilibre partie double','Liens inter-pages enrichis (5-10/page)','Pages orphelines identifiées']},
+  {name:'AuditAgent',phase:'FactCheck général',kvf:'KVF: FactCheckAgent (général)',icon:'◎',c:'#fb923c',
+   models:['gemini-2.0-flash (low risk)','claude-3.5-sonnet (high risk)'],
+   evv:'Output JSON · jamais "verified" par défaut',
+   ins:['Texte brut de chaque page','Entités non-fiscales (noms, dates, statistiques)','Niveau de risque finance-specific'],
+   outs:['Statuts par entité (verified/to-verify/debated/invented)','Fact-Check-Log.md (section non-fiscale)','Contribution au COMPLIANCE_CHECK final']},
+  {name:'InvestmentAgent',phase:'VaultWriter spécialisé',kvf:'KVF: VaultWriter (investissement)',icon:'⊕',c:'#a855f7',
+   models:['gpt-4-turbo (rédaction VAN/TRI)','claude-3.5-sonnet (analyse complexe)'],
+   evv:'Seuil: 7.5 · ≥800 mots · sensibilité 3 scénarios obligatoire',
+   ins:['Plan entry type modèle-calcul','Données projet (cash-flows, durée)','Hypothèses CMPC / coût opportunité'],
+   outs:['Page modèle-calcul VAN/TRI/payback','Tableau de calculs détaillé pas-à-pas','Clause de non-conseil financier']},
+  {name:'CommsAgent',phase:'VaultWriter principal',kvf:'KVF: VaultWriter (principal)',icon:'⊠',c:'#3b82f6',
+   models:['gpt-4-turbo (standard)','claude-3.5-sonnet (qualité élevée)'],
+   evv:'Seuil: 7.5 · ≥800 mots · ≥6 liens · YAML 100%',
+   ins:['Entrée Plan (titre, type, priorité)','Liste titres existants (pour liens)','Résultats FactCheck + run_context'],
+   outs:['Page .md professionnelle CPA','YAML enrichi (regulatory_refs, fiscal_year)','Liens [[...]] contextuels']},
+  {name:'DerivativePricingAgent',phase:'VaultWriter spécialisé',kvf:'KVF: VaultWriter (dérivés)',icon:'⊙',c:'#06b6d4',
+   models:['claude-3.5-sonnet (Black-Scholes/binomial)','gemini-2.5-pro (Monte Carlo complexe)'],
+   evv:'Seuil: 7.5 · ≥800 mots · justification du modèle obligatoire',
+   ins:['Plan entry type modèle-calcul','Caractéristiques dérivé + sous-jacent','Volatilité source (historique vs implicite)'],
+   outs:['Page modèle Black-Scholes/binomial/MC','Greeks (Delta/Gamma/Vega/Theta/Rho)','Limites du modèle explicites']},
+  {name:'SupervisorAgent',phase:'AUDITING + COMPLIANCE_CHECK',kvf:'KVF: AuditAgent + nouveau Compliance',icon:'⊛',c:'#dc2626',
+   models:['gpt-4-turbo (audit)','claude-3.5-sonnet (contradictions complexes)'],
+   evv:'4 types contradictions · 7-points compliance check',
+   ins:['Toutes les pages .md du vault','Fact-Check-Log + embeddings DB','Paires candidates cosine 0.75-0.90'],
+   outs:['Audit.md (CRITIQUES/MAJEURS/MINEURS)','Compliance-Check.md (7 checks)','Recommandations priorisées']},
+  {name:'ForecastAgent',phase:'DEBRIEFING',kvf:'KVF: DebriefAgent',icon:'◉',c:'#10b981',
+   models:['gpt-4-turbo','claude-3.5-sonnet (fallback)'],
+   evv:'CFO-Run-Stats.json · projections ×5 ×10 ×20',
+   ins:['cfo_runs + cfo_steps (DB)','cfo_pages — scores finaux','Audit.md + Compliance résumés'],
+   outs:['Debrief.md narratif + recommandations','CFO-Run-Stats.json métriques complètes','KPI "coût par page validable CPA"']},
+];
+
+function initPipeline(){
+  const p=document.getElementById('pipeline-panel');
+  AG.forEach(a=>{
+    const c=document.createElement('div');
+    c.className='ac'; c.style.borderTopColor=a.c;
+    c.innerHTML=`<div class="ah"><div class="ai" style="background:${a.c}18;color:${a.c}">${a.icon}</div>
+<div><div class="at">${a.name}</div><div class="ap" style="color:${a.c}">${a.phase}</div><div class="akvf">${a.kvf}</div></div></div>
+<div class="iol" style="color:#2563eb">↓ Inputs</div>${a.ins.map(x=>`<div class="ioi in">${x}</div>`).join('')}
+<div class="iol" style="color:#7c3aed">↑ Outputs</div>${a.outs.map(x=>`<div class="ioi out">${x}</div>`).join('')}
+<div class="mt">${a.models.map(m=>`<span class="mb">${m}</span>`).join('')}</div>
+<div class="eb">⚡ ${a.evv}</div>`;
+    p.appendChild(c);
+  });
+}
+
+// ── MAPPING TABLE — KVF roles → CFO agents ──
+const MAP=[
+  {kvf:'Orchestrator (n8n + Z-Kernel)',cfo:'CFO (Auto mode)',rationale:'Déjà orchestrateur dans la suite — AGENT_PROMPTS["Auto"] le positionne en coordinateur',color:'#7c3aed'},
+  {kvf:'ClusterPlanner',cfo:'FinanceAgent',rationale:'Rôle stratégique global — "Planification et Analyse Stratégique" déjà dans agents.ts',color:'#1d4ed8'},
+  {kvf:'FactCheckAgent (général)',cfo:'AuditAgent',rationale:'Son rôle natif est la détection d\'incohérences — étendu aux entités générales',color:'#fb923c'},
+  {kvf:'FactCheckAgent (fiscal)',cfo:'TaxAgent',rationale:'Expertise fiscale native — seul à citer correctement les bulletins CRA/ARQ',color:'#eab308'},
+  {kvf:'FactCheckAgent (comptable)',cfo:'AccountingAgent',rationale:'Vérification écritures + normes NCECF/IFRS = compétence native',color:'#06b6d4'},
+  {kvf:'VaultWriter (principal)',cfo:'CommsAgent',rationale:'Rôle natif = produire rapports et synthèses — étendu au format vault',color:'#3b82f6'},
+  {kvf:'VaultWriter (fiscal)',cfo:'TaxAgent',rationale:'Pages "règle" et "cas-type" fiscal — citation exacte des articles de loi',color:'#eab308'},
+  {kvf:'VaultWriter (investissement)',cfo:'InvestmentAgent',rationale:'Pages "modèle-calcul" VAN/TRI/payback — calculs financiers avancés',color:'#a855f7'},
+  {kvf:'VaultWriter (dérivés)',cfo:'DerivativePricingAgent',rationale:'Pages dérivés Black-Scholes/Greeks — seul à maîtriser ces calculs',color:'#06b6d4'},
+  {kvf:'LinkerAgent',cfo:'AccountingAgent',rationale:'Maintient cohérence des références (logique "grand livre") — score adapté CFO',color:'#06b6d4'},
+  {kvf:'AuditAgent KVF (QA final)',cfo:'SupervisorAgent',rationale:'Rôle natif "Assurance Qualité & Conformité" — étendu détection contradictions inter-pages',color:'#dc2626'},
+  {kvf:'COMPLIANCE_CHECK ★ nouveau',cfo:'SupervisorAgent + TaxAgent + AuditAgent',rationale:'Check-list 7 points finance-specific (PII, taux, articles, CPA mention, normes existantes…)',color:'#0e7490'},
+  {kvf:'DebriefAgent',cfo:'ForecastAgent',rationale:'Rôle natif de projection — adapté aux projections scaling ×5/×10/×20',color:'#10b981'},
+];
+
+function initMapping(){
+  const p=document.getElementById('mapping-panel');
+  if(p.dataset.init==='1') return;
+  p.dataset.init='1';
+  p.innerHTML=`
+    <div style="max-width:1100px;margin:0 auto;width:100%">
+      <h2 style="font-size:18px;color:#c4b5fd;margin-bottom:6px">Mapping rôles KVF → Agents CFO existants</h2>
+      <p style="font-size:12px;color:#6b7280;margin-bottom:18px">Aucun nouvel agent créé. Les 10 agents de <code style="color:#a78bfa;background:#15101e;padding:1px 5px;border-radius:3px">data/agents.ts</code> sont ré-affectés à des rôles du pipeline KVF, parfois en double rôle séquentiel.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="border-bottom:1px solid #1a1a2e">
+            <th style="text-align:left;padding:10px 12px;color:#4b5563;font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;width:30%">Rôle KVF (référence)</th>
+            <th style="text-align:left;padding:10px 12px;color:#4b5563;font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;width:25%">Agent CFO affecté</th>
+            <th style="text-align:left;padding:10px 12px;color:#4b5563;font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Justification</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${MAP.map(m=>`
+            <tr style="border-bottom:1px solid #111118">
+              <td style="padding:11px 12px;color:#9ca3af">${m.kvf}</td>
+              <td style="padding:11px 12px"><span style="color:${m.color};font-weight:600">${m.cfo}</span></td>
+              <td style="padding:11px 12px;color:#6b7280;line-height:1.55">${m.rationale}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <div style="margin-top:24px;padding:14px 16px;background:#0f0f14;border:1px solid #1a1a2e;border-radius:8px">
+        <h4 style="font-size:11px;color:#fbbf24;margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">⚠ Agents avec double rôle séquentiel</h4>
+        <ul style="list-style:none;padding:0;font-size:12px;color:#9ca3af;line-height:1.7">
+          <li><span style="color:#06b6d4;font-weight:600">AccountingAgent</span> → FactCheck comptable (en FULL_WRITING) puis Linker (en LINKING)</li>
+          <li><span style="color:#eab308;font-weight:600">TaxAgent</span> → FactCheck fiscal (sur entités) puis VaultWriter (sur pages "règle"/"cas-type" fiscal)</li>
+          <li><span style="color:#dc2626;font-weight:600">SupervisorAgent</span> → AuditAgent KVF (en AUDITING) puis COMPLIANCE_CHECK (nouvel état)</li>
+        </ul>
+        <p style="margin-top:10px;font-size:11px;color:#6b7280">Acceptable car les rôles sont séquentiels — un agent ne porte jamais deux rôles dans le même batch.</p>
+      </div>
+      <div style="margin-top:14px;padding:14px 16px;background:#15101e;border:1px solid #4c1d95;border-radius:8px">
+        <h4 style="font-size:11px;color:#a78bfa;margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">Pourquoi le CFO ne rédige pas en mode Factory</h4>
+        <p style="font-size:12px;color:#9ca3af;line-height:1.7">Dans le pipeline Factory, le CFO est <b>orchestrateur</b>, pas rédacteur. Cette séparation préserve l'<b>anti-auto-validation EVV</b> (un agent qui rédige ET valide crée un conflit méthodologique). En mode Playground (chat classique), le CFO continue de répondre directement comme aujourd'hui — la séparation ne concerne que le module Factory.</p>
+      </div>
+    </div>
+  `;
+}
+
+// ── INIT ────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{initArch();initState();initPipeline();});
+window.addEventListener('resize',()=>{if(document.getElementById('arch-panel').classList.contains('on'))initArch();});
+</script></body></html>

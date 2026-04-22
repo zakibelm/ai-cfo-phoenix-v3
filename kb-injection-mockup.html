@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<title>AI CFO — Knowledge Base (mockup)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0B1120;--card:#172135;--border:#26314a;--text:#F8FAFC;--text2:#94A3B8;
+  --green:#34D399;--cyan:#22D3EE;--red:#F87171;--yellow:#FBBF24;--purple:#A78BFA;--blue:#60A5FA;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;font-size:14px;min-height:100vh;padding:24px}
+.app{max-width:1280px;margin:0 auto}
+h1{font-size:22px;margin-bottom:6px;font-weight:600}
+.subtitle{color:var(--text2);font-size:13px;margin-bottom:24px}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{padding:10px 18px;cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;border-bottom:2px solid transparent;transition:.15s}
+.tab.on{color:var(--purple);border-bottom-color:var(--purple)}
+.tab:hover:not(.on){color:var(--text)}
+.panel{display:none}
+.panel.on{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.card h2{font-size:15px;margin-bottom:14px;font-weight:600}
+.card h3{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:10px}
+
+/* Dropzone */
+.dropzone{border:2px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;background:rgba(38,49,74,.15);cursor:pointer;transition:.2s}
+.dropzone:hover,.dropzone.over{border-color:var(--purple);background:rgba(167,139,250,.06)}
+.dropzone svg{width:36px;height:36px;color:var(--text2);margin-bottom:12px}
+.dropzone .dp-title{font-size:15px;margin-bottom:4px;font-weight:500}
+.dropzone .dp-sub{color:var(--text2);font-size:12px;margin-bottom:14px}
+.btn{padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:13px;font-weight:500;transition:.15s}
+.btn:hover{border-color:var(--purple);color:var(--purple)}
+.btn.pri{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn.pri:hover{background:#9061f0;color:#fff}
+.btn.danger{color:var(--red);border-color:rgba(248,113,113,.3)}
+.btn.danger:hover{background:rgba(248,113,113,.08);border-color:var(--red)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* File list */
+.file-list{list-style:none;margin-top:14px}
+.file-list li{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(38,49,74,.25);border-radius:6px;margin-bottom:6px;font-size:13px}
+.file-list .fn{flex:1;color:var(--text)}
+.file-list .fs{color:var(--text2);font-size:11px}
+.file-list .x{color:var(--text2);cursor:pointer;font-size:16px;line-height:1}
+.file-list .x:hover{color:var(--red)}
+
+/* Form */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field.full{grid-column:1/-1}
+.field label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.field input,.field select,.field textarea{background:rgba(11,17,32,.6);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;font-family:inherit;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--purple)}
+.field textarea{resize:vertical;min-height:60px}
+.radios{display:flex;gap:14px;align-items:center}
+.radios label{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text);text-transform:none;letter-spacing:0;font-weight:400}
+.radios input{margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:6px;background:rgba(11,17,32,.6);border:1px solid var(--border);border-radius:6px;min-height:38px;align-items:center}
+.chip{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);color:var(--purple);padding:3px 9px;border-radius:14px;font-size:11px;display:flex;align-items:center;gap:5px}
+.chip .x{cursor:pointer;font-size:13px;line-height:1}
+.chips input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:13px;min-width:80px}
+
+/* Per-file refinement */
+.refine{margin-top:14px;border-top:1px solid var(--border);padding-top:14px}
+.refine-toggle{display:flex;align-items:center;gap:8px;color:var(--text2);font-size:12px;cursor:pointer;margin-bottom:10px}
+.refine-toggle:hover{color:var(--text)}
+.refine-rows{display:none}
+.refine.open .refine-rows{display:block}
+.refine-row{background:rgba(38,49,74,.25);border-radius:6px;padding:10px 12px;margin-bottom:6px;display:grid;grid-template-columns:1fr 130px 90px 90px;gap:10px;align-items:center;font-size:12px}
+.refine-row .rn{color:var(--text)}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-bar .field{flex:1;min-width:140px}
+.filter-bar .field label{display:none}
+.search-input{flex:2;background:rgba(11,17,32,.6);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:13px;outline:none}
+.search-input:focus{border-color:var(--purple)}
+
+/* Table KB */
+.kb-table{width:100%;border-collapse:collapse;font-size:13px}
+.kb-table th{text-align:left;padding:10px 12px;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:600;border-bottom:1px solid var(--border)}
+.kb-table td{padding:11px 12px;border-bottom:1px solid rgba(38,49,74,.5);vertical-align:middle}
+.kb-table tr:hover td{background:rgba(38,49,74,.2)}
+.kb-table .doc-name{color:var(--text);font-weight:500;display:flex;align-items:center;gap:8px}
+.kb-table .doc-meta{font-size:11px;color:var(--text2);margin-top:2px}
+.kb-table .checkbox-cell{width:36px}
+.kb-table input[type=checkbox]{accent-color:var(--purple)}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em}
+.badge.dom{background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.25)}
+.badge.sens-public{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.badge.sens-pro{background:rgba(34,211,238,.12);color:var(--cyan);border:1px solid rgba(34,211,238,.3)}
+.badge.sens-conf{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.badge.year{background:rgba(251,191,36,.12);color:var(--yellow);border:1px solid rgba(251,191,36,.3)}
+.badge.runs{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3);cursor:pointer}
+.badge.status-ok{background:rgba(52,211,153,.12);color:var(--green)}
+.badge.status-pending{background:rgba(251,191,36,.12);color:var(--yellow)}
+.badge.status-failed{background:rgba(248,113,113,.12);color:var(--red)}
+.agents-stack{display:flex;align-items:center;gap:3px}
+.agent-chip{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;border:1.5px solid var(--card)}
+.agents-stack .more{background:var(--border);color:var(--text2);font-size:9px}
+
+/* Actions bar (when items selected) */
+.actions-bar{position:sticky;bottom:0;background:var(--card);border:1px solid var(--purple);border-radius:10px;padding:14px 18px;margin-top:16px;display:flex;align-items:center;gap:14px;box-shadow:0 -8px 30px rgba(0,0,0,.3)}
+.actions-bar .selected{color:var(--purple);font-weight:600;font-size:13px}
+.actions-bar .spacer{flex:1}
+
+/* Factory usage view */
+.run-card{background:rgba(38,49,74,.2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px}
+.run-card .run-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.run-card .run-id{font-size:11px;color:var(--purple);font-family:'SF Mono',Consolas,monospace}
+.run-card .run-mandat{font-size:13px;color:var(--text);margin-top:2px;font-weight:500}
+.run-card .run-meta{display:flex;gap:14px;font-size:11px;color:var(--text2);margin-top:4px}
+.run-card .docs-used{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)}
+.run-card .docs-used b{color:var(--text);font-weight:600}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.on{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h2{margin-bottom:6px}
+.modal-sub{color:var(--text2);font-size:12px;margin-bottom:16px}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+
+/* Step indicator */
+.steps{display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:12px}
+.step{display:flex;align-items:center;gap:8px;color:var(--text2)}
+.step .num{width:22px;height:22px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text2)}
+.step.on{color:var(--purple)}
+.step.on .num{background:var(--purple);color:#fff}
+.step.done .num{background:var(--green);color:#fff}
+.step-sep{color:var(--border)}
+
+/* Hint */
+.hint{font-size:11px;color:var(--text2);margin-top:6px;font-style:italic}
+.banner-info{padding:12px 14px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);border-radius:6px;color:var(--blue);font-size:12px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>📚 Knowledge Base — AI CFO Suite</h1>
+  <p class="subtitle">Injecter, gérer et tracer les documents-source consommés par les agents (chat) et le pipeline CFO Knowledge Factory.</p>
+
+  <div class="tabs">
+    <div class="tab on" onclick="sw('inject')">📥 Injecter</div>
+    <div class="tab" onclick="sw('explorer')">🔍 Explorer la KB</div>
+    <div class="tab" onclick="sw('runs')">⚙ Usage en Factory</div>
+  </div>
+
+  <!-- ─────────────────────────────────────── -->
+  <!-- TAB 1 : INJECTER -->
+  <!-- ─────────────────────────────────────── -->
+  <div id="inject-panel" class="panel on">
+
+    <div class="steps">
+      <div class="step on" id="step-1"><div class="num">1</div>Sélection</div>
+      <span class="step-sep">›</span>
+      <div class="step" id="step-2"><div class="num">2</div>Métadonnées (lot)</div>
+      <span class="step-sep">›</span>
+      <div class="step" id="step-3"><div class="num">3</div>Affinage par fichier</div>
+      <span class="step-sep">›</span>
+      <div class="step" id="step-4"><div class="num">4</div>Ingestion</div>
+    </div>
+
+    <!-- Step 1: Drop -->
+    <div class="card" id="card-drop">
+      <div class="dropzone" id="dz" onclick="simulateFiles()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div class="dp-title">Déposez vos documents ici</div>
+        <div class="dp-sub">PDF, Word, Excel, CSV, TXT, MD, PPTX, images — multi-fichiers OK</div>
+        <button class="btn pri">Sélectionner des fichiers</button>
+      </div>
+
+      <ul class="file-list" id="fl">
+        <!-- Files appear here after simulateFiles() -->
+      </ul>
+
+      <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:10px">
+        <button class="btn" onclick="clearFiles()" id="btn-clear" style="display:none">Vider la sélection</button>
+        <button class="btn pri" onclick="goStep(2)" id="btn-next-1" style="display:none">Suivant : métadonnées →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Bulk metadata -->
+    <div class="card" id="card-bulk" style="display:none">
+      <h2>📋 Métadonnées appliquées au lot</h2>
+      <p class="subtitle" style="margin-bottom:16px">Les valeurs ci-dessous s'appliquent à tous les fichiers sélectionnés. Tu pourras affiner par fichier à l'étape suivante.</p>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Domaine</label>
+          <select>
+            <option>Fiscalité QC</option>
+            <option>Fiscalité fédérale CA</option>
+            <option>IFRS 16 — Contrats de location</option>
+            <option>NCECF</option>
+            <option>Audit interne (COSO)</option>
+            <option>M&A — Due diligence</option>
+            <option>Investissement / VAN-TRI</option>
+            <option>Dérivés financiers</option>
+            <option>Multi-domaine</option>
+            <option>+ Personnalisé…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Année fiscale de référence</label>
+          <input type="number" value="2026">
+        </div>
+        <div class="field">
+          <label>Type de document</label>
+          <select>
+            <option>Loi (LIR / LTVQ / LIQ / autre)</option>
+            <option>Bulletin (CRA / ARQ)</option>
+            <option>Norme (NCECF / IFRS)</option>
+            <option>Rapport client</option>
+            <option>Manuel interne / SOP</option>
+            <option>Jurisprudence</option>
+            <option>Autre</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Sensibilité</label>
+          <div class="radios">
+            <label><input type="radio" name="sens" value="public"> Public</label>
+            <label><input type="radio" name="sens" value="pro" checked> Professionnel</label>
+            <label><input type="radio" name="sens" value="conf"> Confidentiel-client</label>
+          </div>
+          <span class="hint">⚠ "Confidentiel-client" force Ollama local — pas d'envoi cloud.</span>
+        </div>
+        <div class="field full">
+          <label>Tags additionnels (séparés par Entrée)</label>
+          <div class="chips" onclick="this.querySelector('input').focus()">
+            <span class="chip">TPS-TVQ <span class="x">×</span></span>
+            <span class="chip">Détaillants <span class="x">×</span></span>
+            <input type="text" placeholder="Ajouter un tag…">
+          </div>
+        </div>
+        <div class="field full">
+          <label>Agents assignés (qui peuvent puiser dans ce doc)</label>
+          <div class="chips" style="cursor:pointer">
+            <span class="chip" style="background:rgba(251,191,36,.12);color:var(--yellow);border-color:rgba(251,191,36,.3)">TaxAgent <span class="x">×</span></span>
+            <span class="chip" style="background:rgba(34,211,238,.12);color:var(--cyan);border-color:rgba(34,211,238,.3)">AccountingAgent <span class="x">×</span></span>
+            <span class="chip" style="background:rgba(248,113,113,.12);color:var(--red);border-color:rgba(248,113,113,.3)">SupervisorAgent <span class="x">×</span></span>
+            <input type="text" placeholder="+ Ajouter un agent…">
+          </div>
+          <span class="hint">Si vide, tous les agents y ont accès (recommandé pour docs publics).</span>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:18px">
+        <button class="btn" onclick="goStep(1)">← Retour</button>
+        <div style="display:flex;gap:10px">
+          <button class="btn" onclick="goStep(4)">Ignorer affinage et ingérer</button>
+          <button class="btn pri" onclick="goStep(3)">Affiner par fichier →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Per-file refinement -->
+    <div class="card" id="card-refine" style="display:none">
+      <h2>🔧 Affinage par fichier (optionnel)</h2>
+      <p class="subtitle" style="margin-bottom:16px">Override des champs si différents pour certains fichiers. Vide = utilise les valeurs du lot.</p>
+
+      <div class="banner-info">ℹ Domaine, année et sensibilité héritent du lot par défaut. Tu peux changer ici fichier par fichier.</div>
+
+      <div id="refine-rows-container"></div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:18px">
+        <button class="btn" onclick="goStep(2)">← Retour</button>
+        <button class="btn pri" onclick="goStep(4)">Démarrer l'ingestion →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Ingestion -->
+    <div class="card" id="card-ingest" style="display:none">
+      <h2>🚀 Ingestion en cours…</h2>
+      <p class="subtitle" style="margin-bottom:16px">Extraction de texte, embedding (intfloat/multilingual-e5-large), indexation pgvector.</p>
+
+      <ul class="file-list" id="fl-progress"></ul>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:18px">
+        <button class="btn pri" onclick="finishIngest()">✓ Terminé — voir l'Explorer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────── -->
+  <!-- TAB 2 : EXPLORER -->
+  <!-- ─────────────────────────────────────── -->
+  <div id="explorer-panel" class="panel">
+    <div class="card">
+      <div class="filter-bar">
+        <input class="search-input" type="text" placeholder="🔍 Rechercher par nom, contenu, référence…">
+        <div class="field"><select><option>Tous domaines</option><option>Fiscalité QC</option><option>IFRS 16</option><option>Audit interne</option></select></div>
+        <div class="field"><select><option>Toutes années</option><option>2026</option><option>2025</option><option>2024</option></select></div>
+        <div class="field"><select><option>Toutes sensibilités</option><option>Public</option><option>Professionnel</option><option>Confidentiel</option></select></div>
+        <div class="field"><select><option>Tous agents</option><option>TaxAgent</option><option>AccountingAgent</option><option>AuditAgent</option></select></div>
+      </div>
+
+      <table class="kb-table">
+        <thead>
+          <tr>
+            <th class="checkbox-cell"><input type="checkbox"></th>
+            <th>Document</th>
+            <th>Domaine</th>
+            <th>Année</th>
+            <th>Sensibilité</th>
+            <th>Agents</th>
+            <th>Statut</th>
+            <th>Runs Factory</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="kb-rows"></tbody>
+      </table>
+
+      <div class="actions-bar" id="actions-bar" style="display:none">
+        <span class="selected"><span id="sel-count">0</span> document(s) sélectionné(s)</span>
+        <div class="spacer"></div>
+        <button class="btn">Réassigner agents</button>
+        <button class="btn">Exporter (CSV)</button>
+        <button class="btn danger">Supprimer</button>
+        <button class="btn pri" onclick="openFactoryModal()">⚙ Démarrer un run Factory →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────── -->
+  <!-- TAB 3 : USAGE EN FACTORY -->
+  <!-- ─────────────────────────────────────── -->
+  <div id="runs-panel" class="panel">
+    <div class="card">
+      <h2>⚙ Runs Factory récents</h2>
+      <p class="subtitle" style="margin-bottom:16px">Vue inversée : pour chaque run du CFO Knowledge Factory, quels documents de la KB ont été consommés.</p>
+
+      <div id="runs-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────── -->
+<!-- MODAL : Lancement run Factory -->
+<!-- ─────────────────────────────────────── -->
+<div class="modal-overlay" id="factory-modal">
+  <div class="modal">
+    <h2>⚙ Démarrer un run CFO Knowledge Factory</h2>
+    <p class="modal-sub">Mode Client — les documents sélectionnés serviront de sources d'analyse pour ce run.</p>
+
+    <div class="form-grid">
+      <div class="field full">
+        <label>Documents sources sélectionnés</label>
+        <div class="chips" style="cursor:default">
+          <span class="chip">Bulletin TPS-2026.pdf</span>
+          <span class="chip">Loi-TVQ-art-470.pdf</span>
+          <span class="chip">Notes-internes-detaillants.docx</span>
+        </div>
+      </div>
+      <div class="field full">
+        <label>Mandat</label>
+        <input type="text" value="Synthèse TPS/TVQ commerce de détail 2026">
+      </div>
+      <div class="field full">
+        <label>Description</label>
+        <textarea>Compilation des règles applicables aux détaillants physiques et en ligne, avec focus sur les seuils, exemptions, obligations de perception.</textarea>
+      </div>
+      <div class="field">
+        <label>Pages cibles</label>
+        <input type="number" value="30">
+      </div>
+      <div class="field">
+        <label>Budget max (€)</label>
+        <input type="number" value="15">
+      </div>
+      <div class="field">
+        <label>Niveau de rigueur</label>
+        <select><option>Professionnel</option><option>Audit-grade</option><option>Grand-public</option></select>
+      </div>
+      <div class="field">
+        <label>Mode</label>
+        <select><option>Pilot (CP1+CP2 obligatoires)</option><option>Production</option></select>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" onclick="closeFactoryModal()">Annuler</button>
+      <button class="btn pri" onclick="closeFactoryModal();alert('🚀 Run lancé : cfokf-2026-04-20-xxxxxx\\n\\n→ Voir progression dans la page Factory.')">🚀 Lancer le run</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── TABS ─────────────────────
+function sw(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',['inject','explorer','runs'][i]===n));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById(n+'-panel').classList.add('on');
+}
+
+// ── FILES SIMULATION ─────────
+let FILES=[];
+const SAMPLE_FILES=[
+  {name:'Bulletin-TPS-TVQ-2026-detaillants.pdf',size:'412 KB'},
+  {name:'Loi-TVQ-art-470-modifications.pdf',size:'128 KB'},
+  {name:'Notes-internes-perception-en-ligne.docx',size:'64 KB'},
+  {name:'Tableau-seuils-fiscaux-2026.xlsx',size:'92 KB'},
+];
+
+function simulateFiles(){
+  if(FILES.length>0)return;
+  FILES=[...SAMPLE_FILES];
+  renderFiles();
+}
+
+function renderFiles(){
+  const fl=document.getElementById('fl');
+  fl.innerHTML='';
+  FILES.forEach((f,i)=>{
+    const li=document.createElement('li');
+    li.innerHTML=`<span class="fn">📄 ${f.name}</span><span class="fs">${f.size}</span><span class="x" onclick="rmFile(${i})">×</span>`;
+    fl.appendChild(li);
+  });
+  document.getElementById('btn-clear').style.display=FILES.length?'inline-block':'none';
+  document.getElementById('btn-next-1').style.display=FILES.length?'inline-block':'none';
+}
+
+function rmFile(i){FILES.splice(i,1);renderFiles();}
+function clearFiles(){FILES=[];renderFiles();}
+
+// ── STEPS NAV ────────────────
+function goStep(n){
+  document.querySelectorAll('.steps .step').forEach((s,i)=>{
+    s.classList.toggle('on',i+1===n);
+    s.classList.toggle('done',i+1<n);
+  });
+  ['drop','bulk','refine','ingest'].forEach((id,i)=>{
+    document.getElementById('card-'+id).style.display=i+1===n?'block':'none';
+  });
+  if(n===3) renderRefineRows();
+  if(n===4) startIngest();
+}
+
+function renderRefineRows(){
+  const c=document.getElementById('refine-rows-container');
+  c.innerHTML='';
+  FILES.forEach((f,i)=>{
+    const row=document.createElement('div');
+    row.className='refine-row';
+    row.innerHTML=`<span class="rn">📄 ${f.name}</span>
+      <select><option>Hérité du lot</option><option>Fiscalité QC</option><option>IFRS 16</option></select>
+      <input type="number" placeholder="2026">
+      <select><option>Hérité</option><option>Public</option><option>Pro</option><option>Conf</option></select>`;
+    c.appendChild(row);
+  });
+}
+
+function startIngest(){
+  const fl=document.getElementById('fl-progress');
+  fl.innerHTML=FILES.map((f,i)=>`
+    <li id="ip-${i}">
+      <span class="fn">📄 ${f.name}</span>
+      <span class="fs status">⏳ En cours…</span>
+    </li>
+  `).join('');
+  // Simulate progressive completion
+  FILES.forEach((f,i)=>{
+    setTimeout(()=>{
+      const li=document.getElementById('ip-'+i);
+      if(li) li.querySelector('.status').innerHTML='<span style="color:var(--green)">✓ Indexé · embedding 1024d</span>';
+    },800+i*600);
+  });
+}
+
+function finishIngest(){
+  // Reset and switch to explorer
+  FILES=[];
+  renderFiles();
+  goStep(1);
+  sw('explorer');
+}
+
+// ── KB ROWS ──────────────────
+const KB_DATA=[
+  {n:'Bulletin-TPS-TVQ-2026-detaillants.pdf',d:'Fiscalité QC',y:2026,s:'pro',a:['T','S','A'],st:'ok',runs:3},
+  {n:'Loi-TVQ-art-470-modifications.pdf',d:'Fiscalité QC',y:2026,s:'public',a:['T'],st:'ok',runs:5},
+  {n:'IFRS-16-leases-handbook.pdf',d:'IFRS 16',y:2025,s:'public',a:['Ac','C'],st:'ok',runs:2},
+  {n:'Dossier-client-Untel-T2-2025.pdf',d:'Audit interne',y:2025,s:'conf',a:['Au','S'],st:'ok',runs:1},
+  {n:'NCECF-3855-instruments-financiers.pdf',d:'NCECF',y:2025,s:'public',a:['Ac'],st:'ok',runs:0},
+  {n:'M&A-VAN-modele-XYZ-Corp.xlsx',d:'M&A',y:2026,s:'conf',a:['I','F','S'],st:'pending',runs:0},
+  {n:'Black-Scholes-greeks-internal.pdf',d:'Dérivés',y:2024,s:'pro',a:['D'],st:'ok',runs:1},
+  {n:'COSO-controles-interne-cycle-revenue.docx',d:'Audit interne',y:2025,s:'pro',a:['Au','S'],st:'failed',runs:0},
+];
+const AGENT_COLORS={T:'#FBBF24',S:'#F87171',A:'#FB923C',Au:'#FB923C',Ac:'#22D3EE',C:'#60A5FA',I:'#A78BFA',F:'#34D399',D:'#22D3EE'};
+const AGENT_NAMES={T:'TaxAgent',S:'SupervisorAgent',A:'AuditAgent',Au:'AuditAgent',Ac:'AccountingAgent',C:'CommsAgent',I:'InvestmentAgent',F:'FinanceAgent',D:'DerivativePricingAgent'};
+const SENS_LABEL={public:'Public',pro:'Professionnel',conf:'Confidentiel'};
+const STATUS_LABEL={ok:'Indexé',pending:'Embedding…',failed:'Échec'};
+
+function renderKB(){
+  const tbody=document.getElementById('kb-rows');
+  tbody.innerHTML=KB_DATA.map((d,i)=>{
+    const ag=d.a.slice(0,3).map(a=>`<span class="agent-chip" style="background:${AGENT_COLORS[a]}" title="${AGENT_NAMES[a]}">${a}</span>`).join('');
+    const more=d.a.length>3?`<span class="agent-chip more">+${d.a.length-3}</span>`:'';
+    return `<tr>
+      <td class="checkbox-cell"><input type="checkbox" onchange="toggleSel()"></td>
+      <td>
+        <div class="doc-name">📄 ${d.n}</div>
+        <div class="doc-meta">${(Math.random()*500+50).toFixed(0)} KB · uploadé il y a ${Math.floor(Math.random()*30)+1} jours</div>
+      </td>
+      <td><span class="badge dom">${d.d}</span></td>
+      <td><span class="badge year">${d.y}</span></td>
+      <td><span class="badge sens-${d.s}">${SENS_LABEL[d.s]}</span></td>
+      <td><div class="agents-stack">${ag}${more}</div></td>
+      <td><span class="badge status-${d.st}">${STATUS_LABEL[d.st]}</span></td>
+      <td>${d.runs?`<span class="badge runs" title="Voir runs">⚙ ${d.runs}</span>`:'<span style="color:var(--text2);font-size:11px">—</span>'}</td>
+      <td><button class="btn sm">Détails</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleSel(){
+  const checked=document.querySelectorAll('#kb-rows input[type=checkbox]:checked').length;
+  const bar=document.getElementById('actions-bar');
+  document.getElementById('sel-count').textContent=checked;
+  bar.style.display=checked>0?'flex':'none';
+}
+
+// ── RUNS DATA ───────────────
+const RUNS=[
+  {id:'cfokf-2026-04-19-a4f7b2c1',mandat:'Synthèse TPS/TVQ commerce de détail 2026',mode:'Client',pages:28,cost:'11.42€',time:'74min',docs:['Bulletin-TPS-TVQ-2026-detaillants.pdf','Loi-TVQ-art-470-modifications.pdf']},
+  {id:'cfokf-2026-04-15-9b2d8e10',mandat:'IFRS 16 — Contrats de location pour PME',mode:'Factory',pages:34,cost:'14.80€',time:'88min',docs:['IFRS-16-leases-handbook.pdf']},
+  {id:'cfokf-2026-04-12-7c1f3a04',mandat:'Due-diligence acquisition XYZ Corp',mode:'Client',pages:42,cost:'18.20€',time:'112min',docs:['Dossier-client-Untel-T2-2025.pdf','M&A-VAN-modele-XYZ-Corp.xlsx','Black-Scholes-greeks-internal.pdf']},
+];
+
+function renderRuns(){
+  document.getElementById('runs-list').innerHTML=RUNS.map(r=>`
+    <div class="run-card">
+      <div class="run-h">
+        <div>
+          <div class="run-id">${r.id}</div>
+          <div class="run-mandat">${r.mandat}</div>
+          <div class="run-meta">
+            <span>📦 Mode : <b style="color:var(--text)">${r.mode}</b></span>
+            <span>📄 ${r.pages} pages</span>
+            <span>💰 ${r.cost}</span>
+            <span>⏱ ${r.time}</span>
+          </div>
+        </div>
+        <span class="badge status-ok">COMPLETED</span>
+      </div>
+      <div class="docs-used"><b>Documents consommés :</b> ${r.docs.map(d=>`<span class="chip" style="margin:2px">📄 ${d}</span>`).join(' ')}</div>
+    </div>
+  `).join('');
+}
+
+// ── MODAL ───────────────────
+function openFactoryModal(){document.getElementById('factory-modal').classList.add('on');}
+function closeFactoryModal(){document.getElementById('factory-modal').classList.remove('on');}
+
+// ── INIT ────────────────────
+renderKB();
+renderRuns();
+</script>
+</body>
+</html>

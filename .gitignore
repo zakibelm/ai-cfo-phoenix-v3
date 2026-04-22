@@ -1,0 +1,80 @@
+# ===========================
+# Node.js / Frontend
+# ===========================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vite cache
+.vite/
+
+# ===========================
+# Backend / Python
+# ===========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.env
+.env.*
+!.env.example
+venv/
+.venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.coverage
+*.egg-info/
+dist/
+build/
+
+# ===========================
+# Docker / Data volumes
+# ===========================
+pgdata/
+
+# ===========================
+# Large files & Uploads
+# ===========================
+backend/uploads/
+backend/uploads_backup/
+backend/poppler/
+uploads/
+
+# Embedded JSON from document processing (can be very large)
+*.embedded.json
+*.embedded*.json
+*.extracted.txt
+
+# ===========================
+# Deployment
+# ===========================
+.vercel/
+.vercelignore
+
+# ===========================
+# Misc
+# ===========================
+*.local
+test-rag.txt
+metadata.json

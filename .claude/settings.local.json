@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(pip install:*)",
+      "Bash(curl:*)",
+      "Bash(python -c ':*)",
+      "Bash(taskkill //F //PID 15388)",
+      "Bash(taskkill //F //PID 8144)",
+      "Bash(taskkill //F //PID 11268)",
+      "Bash(taskkill //F //PID 36420)"
+    ]
+  }
+}
