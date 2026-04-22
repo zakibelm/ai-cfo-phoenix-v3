@@ -3,6 +3,40 @@
 # Élimine la duplication (Auto et CFO partageaient 200+ lignes identiques)
 
 # ─────────────────────────────────────────────────────────────────────────────
+# INSTRUCTION DE FORMATAGE STRUCTURÉ – Sandbox Spreadsheet & Graphiques
+# Cette instruction est injectée dans TOUS les agents pour activer le rendu
+# automatique des tableaux en mode Spreadsheet + graphiques dans le frontend.
+# ─────────────────────────────────────────────────────────────────────────────
+_STRUCTURED_DATA_INSTRUCTION = """
+
+📊 FORMATAGE STRUCTURÉ DES DONNÉES (IMPORTANT):
+Chaque fois que tu présentes des données comparatives, un tableau de chiffres,
+un budget, un bilan, des KPIs ou toute analyse avec plusieurs valeurs numériques,
+structure-les IMPÉRATIVEMENT dans un bloc JSON selon ce format exact :
+
+```json
+{
+  "title": "Titre descriptif du tableau (ex: Budget vs Réel Q1-Q4)",
+  "table": {
+    "headers": ["Catégorie", "Q1", "Q2", "Q3", "Q4", "Total"],
+    "rows": [
+      ["Revenus", "125 000", "148 000", "162 000", "190 000", "625 000"],
+      ["Charges", "98 000", "115 000", "127 000", "148 000", "488 000"],
+      ["Marge nette", "27 000", "33 000", "35 000", "42 000", "137 000"]
+    ]
+  }
+}
+```
+
+RÈGLES:
+- La première colonne est toujours le libellé/catégorie (texte)
+- Les colonnes suivantes contiennent les valeurs numériques (sans symboles $ dans les données)
+- Si tu fournis plusieurs tableaux, encapsule chacun dans son propre bloc ```json
+- Tu peux toujours accompagner le JSON d'une explication textuelle avant ou après
+- N'utilise PAS de tableaux Markdown (| col | ) — utilise exclusivement le format JSON ci-dessus
+"""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # BASE PARTAGÉE – utilisée par Auto (orchestrateur) et CFO (direct)
 # ─────────────────────────────────────────────────────────────────────────────
 _BASE_CFO_PROMPT = """Tu es **Directeur Financier & Orchestrateur Pédagogique** de la suite AI CFO CPA.
@@ -58,7 +92,7 @@ Quand des documents d'examens avec leurs corrigés te sont fournis dans le conte
 AGENT_PROMPTS: dict[str, str] = {
 
     # Auto : orchestrateur — identifie les agents pertinents et synthétise
-    "Auto": _BASE_CFO_PROMPT + """
+    "Auto": _BASE_CFO_PROMPT + _STRUCTURED_DATA_INSTRUCTION + """
 
 🤖 MODE ORCHESTRATEUR ACTIF:
 Tu identifies automatiquement quel(s) agent(s) spécialisé(s) sont les plus pertinents,
@@ -66,7 +100,7 @@ tu leur délègues la tâche, puis tu synthétises leurs réponses en une répon
 Indique toujours explicitement quel(s) agent(s) ont été sollicités et pourquoi.""",
 
     # CFO : mode direct — répond sans délégation, expertise complète immédiate
-    "CFO": _BASE_CFO_PROMPT + """
+    "CFO": _BASE_CFO_PROMPT + _STRUCTURED_DATA_INSTRUCTION + """
 
 💼 MODE CFO DIRECT:
 Tu réponds directement sans délégation aux agents spécialisés.
