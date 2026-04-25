@@ -70,7 +70,7 @@ const Admin: React.FC = () => {
     // Load saved settings from localStorage
     useEffect(() => {
       const savedApiKey = localStorage.getItem('openrouter_api_key') || '';
-      const savedGoogleClientId = localStorage.getItem('google_client_id') || '';
+      const savedGoogleClientId = localStorage.getItem('google_client_id') || '465260070448-8knvvfp0hobbilknbpqdouq6jge06tep.apps.googleusercontent.com';
       const savedGoogleApiKey = localStorage.getItem('google_api_key') || '';
       const savedConfigs = localStorage.getItem('agent_configs');
       

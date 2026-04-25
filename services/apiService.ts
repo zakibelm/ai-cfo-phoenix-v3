@@ -274,7 +274,8 @@ export const connectGoogleDrive = async (clientId?: string | null): Promise<{ su
     }
 
     const scope = 'https://www.googleapis.com/auth/drive.readonly';
-    const redirectUri = window.location.origin + '/'; // Trailing slash often required
+    // Use origin without trailing slash to match the user's JSON exactly
+    const redirectUri = window.location.origin; 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${effectiveClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}`;
     
     // Ouvrir la fenêtre d'authentification Google
