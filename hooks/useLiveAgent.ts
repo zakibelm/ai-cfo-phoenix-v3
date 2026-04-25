@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { GoogleGenAI, LiveSession, LiveServerMessage, Modality, Blob } from '@google/genai';
+import { GoogleGenerativeAI, LiveSession, LiveServerMessage, Blob } from '@google/generative-ai';
 
-// Initialize the GoogleGenAI client once, as per guidelines.
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY || '' });
+// Initialize the GoogleGenerativeAI client once, as per guidelines.
+const ai = new GoogleGenerativeAI(import.meta.env.VITE_API_KEY || '');
 
 // Base64 encoding/decoding and audio processing functions from Gemini API guidelines.
 function encode(bytes: Uint8Array): string {
@@ -219,7 +219,7 @@ export const useLiveAgent = (
                     },
                 },
                 config: {
-                    responseModalities: [Modality.AUDIO],
+                    responseModalities: ['audio' as any],
                     inputAudioTranscription: {},
                     outputAudioTranscription: {},
                     speechConfig: {

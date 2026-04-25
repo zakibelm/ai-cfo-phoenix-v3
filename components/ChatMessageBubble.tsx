@@ -56,7 +56,7 @@ export const ChatMessageBubble: React.FC<ChatMessageBubbleProps> = ({ message })
         </div>
       )}
 
-      <div className={`chat-bubble ${isUser ? 'user' : `model ${isError ? 'error' : ''}`}`}>
+      <div className={`chat-bubble ${isUser ? 'user' : `model ${isError ? 'error' : ''}`} ${hasTable ? 'has-structured-data' : ''}`}>
         {!isUser && agent && (
           <div className="chat-bubble-agent">
             <p>{getAgentRoleByName(agent)}</p>

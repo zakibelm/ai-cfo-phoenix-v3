@@ -106,7 +106,7 @@ const Explore: React.FC<ExploreProps> = ({ documents, ragContext, setRagContext,
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Explorateur RAG</h1>
+        <h1 className="page-title" style={{ margin: 0 }}>Documents Clients</h1>
         <button 
           onClick={removeDuplicates}
           className="admin-button"

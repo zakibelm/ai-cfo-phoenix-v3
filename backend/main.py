@@ -25,6 +25,10 @@ from agent_prompts import AGENT_PROMPTS
 from services.rag_service import build_rag_context, load_document_text
 from services.text_extractor import extract_text_from_file
 from utils.security import is_allowed_file_type, is_safe_path, sanitize_filename
+from z_kernel import call_llm, call_llm_stream, select_model
+from kb_storage import vector_search
+from kb_ingest import generate_embedding
+from security_pii import scrub_text, ScrubLevel
 
 # Encodage UTF-8 sous Windows
 if sys.platform == "win32":
@@ -239,46 +243,59 @@ async def get_rag_document(filename: str):
 # Helper : construction des messages pour l'API LLM
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _build_messages(
+async def _build_messages_context(
     query_text: str,
     selected_agent: str,
     document_name: str | None,
     conversation_history: list,
-) -> list:
-    """Construit la liste de messages pour l'API OpenRouter."""
+    sensibilite: str = "professionnel",
+) -> tuple[str, list]:
+    """
+    Construit le system prompt et la liste de messages,
+    en integrant le RAG semantique si aucun document precis n'est specifie,
+    ou le RAG cible si document_name est fourni.
+    """
     system_prompt = AGENT_PROMPTS.get(selected_agent, AGENT_PROMPTS["Auto"])
     system_prompt += "\n\nTu reponds de maniere professionnelle et concise en francais."
 
-    messages = [{"role": "system", "content": system_prompt}]
+    messages = []
 
-    # Charger le contexte RAG si un document est specifie
-    rag_content = ""
-    if document_name:
+    # 1. RAG SEMANTIQUE (si pas de document specifique)
+    rag_context = ""
+    if not document_name:
+        # Generer embedding de la query pour recherche vectorielle
+        emb = await generate_embedding(query_text, sensibilite=sensibilite)
+        if emb:
+            matches = vector_search(emb, limit=3)
+            if matches:
+                rag_context = "CONTEXTE SEMANTIQUE (KB):\n"
+                for m in matches:
+                    rag_context += f"--- {m['filename']} ---\n{m.get('text_excerpt', '')}\n"
+    
+    # 2. RAG CIBLE (si document specifie par l'UI)
+    elif document_name:
         safe_name = sanitize_filename(document_name)
         raw_text = load_document_text(UPLOAD_DIR, safe_name)
         if raw_text:
-            rag_content = build_rag_context(raw_text, query_text)
+            rag_context = f"CONTEXTE (Document: {document_name}):\n"
+            rag_context += build_rag_context(raw_text, query_text)
 
-    if rag_content and conversation_history:
-        first_msg = conversation_history[0]
-        enhanced = (
-            f"CONTEXTE (Document RAG: {document_name}):\n{rag_content}\n\n---\n\n"
-            f"{first_msg.get('content', '')}"
-        )
-        messages.append({"role": "user", "content": enhanced})
-        messages.extend(conversation_history[1:])
-    elif rag_content:
-        user_prompt = (
-            f"CONTEXTE (Document RAG: {document_name}):\n{rag_content}\n\n---\n\n"
-            f"QUESTION: {query_text}"
-        )
-        messages.append({"role": "user", "content": user_prompt})
-    elif conversation_history:
+    # 3. Construction du premier message utilisateur (Context + Query)
+    user_content = query_text
+    if rag_context:
+        user_content = f"{rag_context}\n\n---\n\nQUESTION: {query_text}"
+
+    # 4. Assemblage historique
+    if conversation_history:
         messages.extend(conversation_history)
+        if messages and messages[-1]["role"] == "user":
+             messages[-1]["content"] = user_content
+        else:
+             messages.append({"role": "user", "content": user_content})
     else:
-        messages.append({"role": "user", "content": query_text})
+        messages.append({"role": "user", "content": user_content})
 
-    return messages
+    return system_prompt, messages
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -297,99 +314,40 @@ async def query(payload: dict):
 
     document_name: str | None = payload.get("document_name")
     selected_agent: str = payload.get("agent", "Auto")
-    selected_model: str = payload.get("model", DEFAULT_MODEL)
-    conversation_history: list = payload.get("history", [])
+    sensibilite: str = payload.get("sensibilite", "professionnel")
 
-    # Securite : la cle API vient uniquement du serveur
-    api_key = OPENROUTER_API_KEY
-    if not api_key:
-        raise HTTPException(
-            status_code=503,
-            detail="Cle API OpenRouter non configuree sur le serveur. Contactez l'administrateur."
-        )
+    system_prompt, messages = await _build_messages_context(
+        query_text, selected_agent, document_name, payload.get("history", []), sensibilite
+    )
 
-    messages = _build_messages(query_text, selected_agent, document_name, conversation_history)
-    agent_name = "CFO" if selected_agent == "Auto" else selected_agent
-
+    model = select_model(selected_agent, 100.0)
+    
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                OPENROUTER_API_URL,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "HTTP-Referer": "http://localhost:5173",
-                    "X-Title": "AI CFO Suite",
-                },
-                json={"model": selected_model, "messages": messages},
-                timeout=60.0,
-            )
-
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=502,
-                detail=f"Erreur API OpenRouter [{response.status_code}]: {response.text[:300]}"
-            )
-
-        data = response.json()
-        choices = data.get("choices", [])
-        if not choices:
-            err_msg = data.get("error", {}).get("message", "Format de reponse inattendu")
-            raise HTTPException(status_code=502, detail=f"Reponse API invalide: {err_msg}")
-
+        response_text = await call_llm(
+            model=model,
+            system_prompt=system_prompt,
+            user_prompt=messages[-1]["content"],
+            sensibilite=sensibilite
+        )
+        
         return {
-            "agent": agent_name,
-            "response": choices[0]["message"]["content"],
-            "tool_calls": [],
+            "agent": selected_agent,
+            "response": response_text,
+            "model": model
         }
 
     except HTTPException:
         raise
     except Exception as exc:
         safe_msg = str(exc).encode("ascii", "ignore").decode("ascii")
-        raise HTTPException(status_code=500, detail=f"Erreur interne: {safe_msg}")
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {safe_msg}") from exc
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Requete IA avec streaming SSE (Server-Sent Events)
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def _stream_openrouter(
-    messages: list,
-    model: str,
-    api_key: str,
-) -> AsyncGenerator[str, None]:
-    """Generateur de tokens SSE depuis l'API OpenRouter (streaming)."""
-    async with httpx.AsyncClient() as client, client.stream(
-        "POST",
-        OPENROUTER_API_URL,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "HTTP-Referer": "http://localhost:5173",
-            "X-Title": "AI CFO Suite",
-        },
-        json={"model": model, "messages": messages, "stream": True},
-        timeout=90.0,
-    ) as response:
-        if response.status_code != 200:
-            await response.aread()
-            yield f"data: {json.dumps({'error': f'API error {response.status_code}'})}\n\n"
-            return
 
-        async for line in response.aiter_lines():
-            if not line.startswith("data: "):
-                continue
-            data_str = line[6:]
-            if data_str == "[DONE]":
-                yield "data: [DONE]\n\n"
-                return
-            try:
-                data = json.loads(data_str)
-                delta = data["choices"][0]["delta"]
-                content = delta.get("content", "")
-                if content:
-                    yield f"data: {json.dumps({'content': content})}\n\n"
-            except (KeyError, json.JSONDecodeError):
-                continue
 
 
 @app.post("/stream-query")
@@ -404,21 +362,31 @@ async def stream_query(payload: dict):
 
     document_name: str | None = payload.get("document_name")
     selected_agent: str = payload.get("agent", "Auto")
-    selected_model: str = payload.get("model", DEFAULT_MODEL)
-    conversation_history: list = payload.get("history", [])
+    sensibilite: str = payload.get("sensibilite", "professionnel")
 
-    api_key = OPENROUTER_API_KEY
-    if not api_key:
-        raise HTTPException(status_code=503, detail="Cle API OpenRouter non configuree.")
+    # Construction du contexte et des messages
+    system_prompt, messages = await _build_messages_context(
+        query_text, selected_agent, document_name, payload.get("history", []), sensibilite
+    )
 
-    messages = _build_messages(query_text, selected_agent, document_name, conversation_history)
+    model = select_model(selected_agent, 100.0)
     agent_name = "CFO" if selected_agent == "Auto" else selected_agent
 
-    # Envoyer le nom de l'agent en premier event
     async def event_stream() -> AsyncGenerator[str, None]:
+        # 1. Envoyer l'agent choisi
         yield f"data: {json.dumps({'agent': agent_name})}\n\n"
-        async for chunk in _stream_openrouter(messages, selected_model, api_key):
-            yield chunk
+        
+        # 2. Streamer les tokens via z_kernel.call_llm_stream
+        async for token in call_llm_stream(
+            model=model,
+            system_prompt=system_prompt,
+            user_prompt=messages[-1]["content"],
+            sensibilite=sensibilite
+        ):
+            yield f"data: {json.dumps({'content': token})}\n\n"
+        
+        # 3. Fin du stream
+        yield "data: [DONE]\n\n"
 
     return StreamingResponse(
         event_stream(),

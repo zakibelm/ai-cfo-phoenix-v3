@@ -15,6 +15,8 @@ Fallbacks :
 - Si SUPABASE absent → stockage local JSON via kb_storage
 """
 
+from __future__ import annotations
+
 import hashlib
 import os
 from datetime import datetime
@@ -23,6 +25,8 @@ from pathlib import Path
 import httpx
 
 from kb_storage import insert_kb_doc
+from ollama_client import check_ollama_alive, generate_embedding_ollama
+from security_pii import ScrubLevel, scrub_text
 from services.text_extractor import extract_text_from_file
 from utils.security import is_allowed_file_type, is_safe_path, sanitize_filename
 
@@ -41,13 +45,33 @@ HF_EMBED_URL = "https://api-inference.huggingface.co/models/intfloat/multilingua
 # Embedding via Hugging Face
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def generate_embedding(text: str) -> list[float] | None:
-    """Génère un embedding 1024d. Retourne None si HF indisponible."""
-    if not HF_API_TOKEN:
-        return None
+async def generate_embedding(text: str, sensibilite: str = "professionnel") -> list[float] | None:
+    """Génère un embedding 1024d.
+    Règles Loi 25 :
+    - confidentiel-client → Ollama local OBLIGATOIRE (pas d'envoi cloud)
+    - professionnel → cloud OK mais scrubbing préalable
+    """
     if not text:
         return None
-    # Tronquer à 8k tokens approx (e5-large max = 512 tokens mais on limite pour stability)
+
+    # 1. Mode CONFIDENTIEL-CLIENT → Ollama obligatoire
+    if sensibilite == "confidentiel-client":
+        if await check_ollama_alive():
+            return await generate_embedding_ollama(text)
+        print("[WARN] Embedding confidentiel impossible : Ollama local indisponible.")
+        return None
+
+    # 2. Mode PROFESSIONNEL/PUBLIC → Cloud HF (avec scrubbing si pro)
+    if sensibilite == "professionnel":
+        text, _ = scrub_text(text, level=ScrubLevel.MEDIUM)
+
+    if not HF_API_TOKEN:
+        # Fallback local si pas de token cloud
+        if await check_ollama_alive():
+            return await generate_embedding_ollama(text)
+        return None
+
+    # Tronquer pour l'API
     text = text[:2000]
     try:
         async with httpx.AsyncClient(timeout=45.0) as client:
@@ -58,16 +82,20 @@ async def generate_embedding(text: str) -> list[float] | None:
             )
             if resp.status_code != 200:
                 print(f"[WARN] HF embedding failed: {resp.status_code} {resp.text[:200]}")
+                # Dernier recours : local si HF fail
+                if await check_ollama_alive():
+                    return await generate_embedding_ollama(text)
                 return None
             data = resp.json()
-            # HF retourne parfois [[...embeddings...]] parfois [...] directement
             if isinstance(data, list) and data and isinstance(data[0], list):
                 return data[0]
-            if isinstance(data, list) and data and isinstance(data[0], (int, float)):
+            if isinstance(data, list) and data and isinstance(data[0], int | float):
                 return data
             return None
     except (httpx.HTTPError, ValueError, KeyError) as e:
         print(f"[WARN] Embedding error: {e}")
+        if await check_ollama_alive():
+            return await generate_embedding_ollama(text)
         return None
 
 
@@ -101,8 +129,8 @@ async def ingest_file(
 
     excerpt = (text_content[:500] + "…") if len(text_content) > 500 else text_content
 
-    # Embedding (facultatif)
-    embedding = await generate_embedding(text_content) if text_content else None
+    # Embedding (facultatif, respecte sensibilite)
+    embedding = await generate_embedding(text_content, sensibilite=meta.get("sensibilite", "professionnel")) if text_content else None
 
     # File size
     try:

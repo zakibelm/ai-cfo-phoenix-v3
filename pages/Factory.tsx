@@ -17,7 +17,6 @@ import AgentCheckboxSelector from '../components/AgentCheckboxSelector';
 import { SpinnerIcon } from '../components/icons/SpinnerIcon';
 import { CheckIcon } from '../components/icons/CheckIcon';
 import { API_BASE_URL } from '../services/apiService';
-import { agentDetails } from '../data/agents';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES

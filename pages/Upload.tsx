@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Document } from '../types';
 import Banner from '../components/Banner';
-import { uploadFiles } from '../services/apiService';
+import { uploadFiles, listGoogleDriveFiles, connectGoogleDrive, showGooglePicker } from '../services/apiService';
 import { CheckIcon } from '../components/icons/CheckIcon';
 import { SpinnerIcon } from '../components/icons/SpinnerIcon';
 import { UploadIcon } from '../components/icons/UploadIcon';
@@ -43,9 +43,14 @@ const Upload: React.FC<UploadProps> = ({ addDocument, updateDocument }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeRequestController = useRef<AbortController | null>(null);
   const [fileProgresses, setFileProgresses] = useState<FileProgress[]>([]);
+  const [uploadSource, setUploadSource] = useState<'local' | 'gdrive'>('local');
+  const [sessionOnly, setSessionOnly] = useState(true);
 
   const [processedDocs, setProcessedDocs] = useState<Document[]>([]);
   const [addedToRagIds, setAddedToRagIds] = useState<Set<number | string>>(new Set());
+  const [gdriveFiles, setGdriveFiles] = useState<any[]>([]);
+  const [isBrowsingDrive, setIsBrowsingDrive] = useState(false);
+  const [isConnected, setIsConnected] = useState(!!localStorage.getItem('google_access_token'));
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -54,6 +59,21 @@ const Upload: React.FC<UploadProps> = ({ addDocument, updateDocument }) => {
       setIngestionError(null);
     }
   };
+
+  useEffect(() => {
+    const handleFocus = () => {
+      setIsConnected(!!localStorage.getItem('google_access_token'));
+    };
+    
+    // Check every second while the component is mounted
+    const interval = setInterval(handleFocus, 1000);
+    
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, []);
 
   const onDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -211,6 +231,69 @@ const Upload: React.FC<UploadProps> = ({ addDocument, updateDocument }) => {
     } finally {
         activeRequestController.current = null;
     }
+  };
+
+  const handleBrowseDrive = async (folderId?: string) => {
+    console.log(`handleBrowseDrive called for folder: ${folderId || 'root'}`);
+    
+    // If we have a folderId, we are navigating. If not, we are opening the picker or root.
+    if (folderId) {
+        setIsBrowsingDrive(true);
+        try {
+            const children = await listGoogleDriveFiles(folderId);
+            setGdriveFiles(children);
+        } catch (err) {
+            console.error("Failed to list folder content", err);
+        } finally {
+            setIsBrowsingDrive(false);
+        }
+        return;
+    }
+
+    try {
+        await showGooglePicker((selectedFiles) => {
+            console.log("Files selected in Picker:", selectedFiles);
+            const formattedFiles = selectedFiles.map(f => ({
+                id: f.id,
+                name: f.name || f.title,
+                size: f.sizeBytes || 0,
+                mimeType: f.mimeType,
+                isFolder: f.mimeType === 'application/vnd.google-apps.folder' || f.mimeType === 'folder' || (f.type === 'folder')
+            }));
+            
+            setGdriveFiles(formattedFiles);
+            
+            setTimeout(() => {
+                const el = document.querySelector('.gdrive-results');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        });
+    } catch (err) {
+        console.error("Failed to show google picker", err);
+        alert("Erreur lors de l'ouverture du sélecteur Google Drive.");
+    }
+  };
+
+  const handleConnectDrive = async () => {
+    console.log("Button: Authentifier Google Drive clicked");
+    try {
+        const result = await connectGoogleDrive();
+        if (result.success) {
+            console.log("OAuth process started successfully.");
+        } else {
+            console.warn("Connect process failed or was cancelled.");
+        }
+    } catch (err) {
+        console.error("Critical error during connection:", err);
+        alert("Une erreur est survenue lors de la tentative de connexion.");
+    }
+  };
+
+  const handleDisconnectDrive = () => {
+    localStorage.removeItem('google_access_token');
+    setIsConnected(false);
+    setGdriveFiles([]);
+    alert("Compte Google déconnecté.");
   };
 
   const handleAddToRag = (docToAdd: Document) => {
@@ -401,14 +484,225 @@ const Upload: React.FC<UploadProps> = ({ addDocument, updateDocument }) => {
 
   return (
     <div className="page-container upload-page-container">
-        <h1 className="page-title">Téléversement RAG</h1>
-        <p className="page-subtitle" style={{marginBottom: '2rem' }}>
-            Téléversez vos documents. Leur contenu sera extrait, traité et rendu disponible aux agents via la base de connaissances RAG.
-        </p>
+        <div className="source-selector" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', justifyContent: 'center' }}>
+            <button 
+                onClick={() => setUploadSource('local')}
+                className={`source-button ${uploadSource === 'local' ? 'active' : ''}`}
+                style={{
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    background: uploadSource === 'local' ? 'var(--accent-cyan)' : 'transparent',
+                    color: uploadSource === 'local' ? 'black' : 'var(--primary-text)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                }}
+            >
+                📁 Fichiers Locaux
+            </button>
+            <button 
+                onClick={() => setUploadSource('gdrive')}
+                className={`source-button ${uploadSource === 'gdrive' ? 'active' : ''}`}
+                style={{
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    background: uploadSource === 'gdrive' ? '#4285F4' : 'transparent',
+                    color: 'white',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                }}
+            >
+                🤖 Google Drive
+            </button>
+        </div>
+
+        <div className="confidentiality-options" style={{ maxWidth: '800px', margin: '0 auto 2rem auto', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                    <h4 style={{ margin: 0 }}>Traitement en Session Uniquement</h4>
+                    <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.7 }}>Les fichiers ne seront pas stockés localement après traitement (Loi 25).</p>
+                </div>
+                <input 
+                    type="checkbox" 
+                    checked={sessionOnly} 
+                    onChange={(e) => setSessionOnly(e.target.checked)}
+                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                />
+            </div>
+        </div>
       
       {ingestionError && !isIngesting && files.length === 0 && <div style={{ maxWidth: '800px', width: '100%', margin: '0 auto 1rem auto' }}><Banner type="error" message={ingestionError} /></div>}
 
-      {renderContent()}
+      {uploadSource === 'local' ? renderContent() : (
+          <div className="gdrive-container" style={{ textAlign: 'center', padding: '4rem', background: 'rgba(66, 133, 244, 0.05)', borderRadius: '24px', border: '2px dashed #4285F4' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>☁️</div>
+              <h3>Importer depuis Google Drive</h3>
+              <p style={{ maxWidth: '400px', margin: '0 auto 1.5rem auto', opacity: 0.7 }}>
+                  Sélectionnez vos dossiers clients directement depuis votre Drive sécurisé.
+              </p>
+
+              <div style={{ marginBottom: '2rem' }}>
+                  <span style={{ 
+                      padding: '0.4rem 1rem', 
+                      borderRadius: '20px', 
+                      fontSize: '0.8rem', 
+                      background: isConnected ? 'rgba(0, 255, 100, 0.1)' : 'rgba(255, 100, 0, 0.1)',
+                      color: isConnected ? '#00ff66' : '#ff9900',
+                      border: `1px solid ${isConnected ? '#00ff66' : '#ff9900'}`
+                  }}>
+                      {isConnected ? "✅ Connecté" : "⚠️ Non connecté"}
+                  </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  {isConnected ? (
+                      <button 
+                        className="upload-button secondary" 
+                        onClick={handleDisconnectDrive}
+                      >
+                          Déconnecter le compte
+                      </button>
+                  ) : (
+                      <button 
+                        className="upload-button secondary" 
+                        onClick={handleConnectDrive}
+                        style={{ border: '1px solid #4285F4', color: '#4285F4' }}
+                      >
+                          🔑 Authentifier Google Drive
+                      </button>
+                  )}
+                  <button 
+                    className="upload-button primary" 
+                    style={{ background: '#4285F4', opacity: isConnected ? 1 : 0.5 }}
+                    onClick={handleBrowseDrive}
+                    disabled={isBrowsingDrive}
+                  >
+                      {isBrowsingDrive ? "Ouverture du sélecteur..." : "Parcourir mon Google Drive"}
+                  </button>
+              </div>
+              
+              {gdriveFiles.length > 0 && (
+                  <div className="gdrive-picker-overlay animate-fade-in" style={{ 
+                      position: 'fixed',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      background: 'rgba(0,0,0,0.85)',
+                      zIndex: 10000,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '20px'
+                  }}>
+                    <div className="gdrive-picker-modal" style={{
+                        width: '100%',
+                        maxWidth: '800px',
+                        height: '80vh',
+                        background: '#1a1a20',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                        border: '1px solid rgba(66, 133, 244, 0.4)',
+                        overflow: 'hidden'
+                    }}>
+                        <div className="picker-header" style={{
+                            padding: '1rem 1.5rem',
+                            background: '#24242e',
+                            borderBottom: '1px solid rgba(255,255,255,0.1)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Drive" style={{ width: '24px' }} />
+                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 500 }}>Sélecteur Google Drive (Simulé)</h3>
+                            </div>
+                            <button 
+                                onClick={() => setGdriveFiles([])}
+                                style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer', opacity: 0.7 }}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="picker-body" style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                               <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
+                                   Sélectionnez les dossiers ou fichiers clients à importer.
+                               </p>
+                               {gdriveFiles.some(f => f.id.startsWith('sub') || f.id.startsWith('arc')) && (
+                                   <button 
+                                     className="upload-button secondary small" 
+                                     style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', width: 'auto' }}
+                                     onClick={() => handleBrowseDrive()}
+                                   >
+                                       ⬅ Retour à la racine
+                                   </button>
+                               )}
+                           </div>
+
+                           <div className="file-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                               {gdriveFiles.map(f => (
+                                   <div key={f.id} className="gdrive-file-card" style={{ 
+                                       background: 'rgba(255,255,255,0.03)', 
+                                       padding: '1rem', 
+                                       borderRadius: '8px', 
+                                       border: '1px solid rgba(255,255,255,0.05)',
+                                       display: 'flex',
+                                       flexDirection: 'column',
+                                       gap: '0.75rem',
+                                       transition: 'all 0.2s',
+                                       cursor: 'default'
+                                   }}>
+                                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                           <span style={{ fontSize: '1.5rem' }}>{f.isFolder ? '📁' : '📄'}</span>
+                                           <span style={{ fontSize: '0.85rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                                       </div>
+                                       
+                                       {f.isFolder ? (
+                                           <button 
+                                             className="upload-button primary small" 
+                                             style={{ width: '100%', padding: '0.4rem', fontSize: '0.7rem', borderRadius: '4px', background: 'rgba(66, 133, 244, 0.5)' }}
+                                             onClick={() => handleBrowseDrive(f.id)}
+                                           >
+                                               Ouvrir dossier
+                                           </button>
+                                       ) : (
+                                           <button 
+                                             className="upload-button secondary small" 
+                                             style={{ width: '100%', padding: '0.4rem', fontSize: '0.7rem', borderRadius: '4px' }}
+                                             onClick={() => {
+                                                 alert(`✅ ${f.name} ajouté à la session.`);
+                                                 setFiles(prev => [...prev, new File(["content"], f.name, { type: f.mimeType })]);
+                                                 setGdriveFiles([]);
+                                             }}
+                                           >
+                                               Importer
+                                           </button>
+                                       )}
+                                   </div>
+                               ))}
+                           </div>
+                        </div>
+                        
+                        <div className="picker-footer" style={{ 
+                            padding: '1rem 1.5rem', 
+                            background: '#24242e', 
+                            borderTop: '1px solid rgba(255,255,255,0.1)',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: '1rem'
+                        }}>
+                            <button className="upload-button secondary small" onClick={() => setGdriveFiles([])}>Annuler</button>
+                            <button className="upload-button primary small" style={{ background: '#4285F4' }} onClick={() => setGdriveFiles([])}>Terminer</button>
+                        </div>
+                    </div>
+                  </div>
+              )}
+          </div>
+      )}
 
     </div>
   );

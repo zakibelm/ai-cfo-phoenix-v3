@@ -59,6 +59,29 @@ export default function App() {
   const [documents, setDocuments] = useState<Document[]>(loadDocuments);
   const [ragContext, setRagContext] = useState<Document | null>(loadRagContext);
 
+  // Extract Google OAuth token from URL hash if present
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token=')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const token = params.get('access_token');
+      if (token) {
+        localStorage.setItem('google_access_token', token);
+        // Clear hash from URL
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        
+        console.log("Google Access Token saved to localStorage.");
+        
+        // Redirect back to the original page if we have a stored path
+        const redirectPath = localStorage.getItem('oauth_redirect_path');
+        if (redirectPath && redirectPath !== window.location.pathname) {
+          localStorage.removeItem('oauth_redirect_path');
+          window.location.href = redirectPath;
+        }
+      }
+    }
+  }, []);
+
   // Save documents to localStorage whenever they change
   useEffect(() => {
     try {

@@ -4,6 +4,7 @@ import { LlamaIndexIcon } from '../components/icons/LlamaIndexIcon';
 import { QdrantIcon } from '../components/icons/QdrantIcon';
 import { AdminIcon } from '../components/icons/AdminIcon';
 import { CheckIcon } from '../components/icons/CheckIcon';
+import { connectGoogleDrive } from '../services/apiService';
 import { agentDetails } from '../data/agents';
 import { AgentIcon } from '../components/AgentIcon';
 
@@ -58,17 +59,24 @@ interface AgentConfig {
 const Admin: React.FC = () => {
     const [darkMode, setDarkMode] = useState(true);
     const [apiKey, setApiKey] = useState('');
+    const [googleClientId, setGoogleClientId] = useState('');
+    const [googleApiKey, setGoogleApiKey] = useState('');
     const [apiKeySaved, setApiKeySaved] = useState(false);
     const [isTesting, setIsTesting] = useState(false);
     const [testResult, setTestResult] = useState<{success: boolean; message: string} | null>(null);
     const [agentConfigs, setAgentConfigs] = useState<Record<string, AgentConfig>>({});
+    const [gdriveConnected, setGdriveConnected] = useState(false);
 
     // Load saved settings from localStorage
     useEffect(() => {
       const savedApiKey = localStorage.getItem('openrouter_api_key') || '';
+      const savedGoogleClientId = localStorage.getItem('google_client_id') || '';
+      const savedGoogleApiKey = localStorage.getItem('google_api_key') || '';
       const savedConfigs = localStorage.getItem('agent_configs');
       
       setApiKey(savedApiKey);
+      setGoogleClientId(savedGoogleClientId);
+      setGoogleApiKey(savedGoogleApiKey);
       if (savedConfigs) {
         setAgentConfigs(JSON.parse(savedConfigs));
       } else {
@@ -90,6 +98,8 @@ const Admin: React.FC = () => {
         return;
       }
       localStorage.setItem('openrouter_api_key', apiKey);
+      localStorage.setItem('google_client_id', googleClientId);
+      localStorage.setItem('google_api_key', googleApiKey);
       setApiKeySaved(true);
       setTimeout(() => setApiKeySaved(false), 2000);
     };
@@ -150,6 +160,21 @@ const Admin: React.FC = () => {
     const handleSaveAgentConfigs = () => {
       localStorage.setItem('agent_configs', JSON.stringify(agentConfigs));
       alert('✅ Configuration des agents sauvegardée !');
+    };
+
+    const handleConnectGDrive = async () => {
+        console.log("handleConnectGDrive called with state clientId:", googleClientId);
+        try {
+            const result = await connectGoogleDrive(googleClientId);
+            console.log("connectGoogleDrive result:", result);
+            if (result.success) {
+                setGdriveConnected(true);
+                alert("✅ Google Drive connecté avec succès (Simulation)");
+            }
+        } catch (error) {
+            console.error("Error in handleConnectGDrive:", error);
+            alert("❌ Erreur lors de la connexion Google Drive.");
+        }
     };
 
   return (
@@ -250,6 +275,69 @@ const Admin: React.FC = () => {
           </div>
         </div>
         
+        {/* Cloud Integrations */}
+        <div className="admin-card">
+          <h2 className="admin-card-title">Intégrations Cloud</h2>
+          <div className="admin-card-content">
+            <p>Connectez vos comptes cloud pour accéder directement à vos dossiers clients.</p>
+            <div className="integration-item">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="service-item-icon" style={{ background: '#4285F4', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', borderRadius: '4px', width: '32px', height: '32px' }}>G</div>
+                <div>
+                  <span style={{ fontWeight: 600 }}>Google Drive</span>
+                  <p style={{ fontSize: '0.8rem', margin: 0, opacity: 0.7 }}>Accès aux documents confidentiels clients</p>
+                </div>
+              </div>
+              <div className="google-creds" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Google Client ID (ou 'demo')" 
+                    value={googleClientId}
+                    onChange={(e) => setGoogleClientId(e.target.value)}
+                    className="api-key-input"
+                    style={{ fontSize: '0.8rem' }}
+                  />
+                  <p style={{ fontSize: '0.7rem', margin: '0 0 0.5rem 0', opacity: 0.6 }}>
+                    Utilisez <strong>demo</strong> pour tester sans identifiants réels.
+                  </p>
+                  <input 
+                    type="password" 
+                    placeholder="Google API Key" 
+                    value={googleApiKey}
+                    onChange={(e) => setGoogleApiKey(e.target.value)}
+                    className="api-key-input"
+                    style={{ fontSize: '0.8rem' }}
+                  />
+              </div>
+              <button 
+                onClick={handleConnectGDrive} 
+                className={`upload-button ${gdriveConnected ? 'success' : 'secondary'}`} 
+                style={{ width: '100%' }}
+              >
+                {gdriveConnected ? "Google Drive Connecté" : "Authentifier avec Google"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Data Governance & Confidentiality */}
+        <div className="admin-card">
+            <h2 className="admin-card-title">Confidentialité & Souveraineté</h2>
+            <div className="admin-card-content">
+              <p>Configurez comment les dossiers clients sont traités pour garantir la Loi 25.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <Toggle 
+                  label="Traitement en Session Uniquement" 
+                  enabled={true} 
+                  setEnabled={() => {}} 
+                />
+                <p style={{ fontSize: '0.75rem', marginTop: '-0.5rem', opacity: 0.7 }}>
+                  Si activé, les documents partagés via Google Drive ne sont jamais stockés sur le serveur local, ils sont traités en mémoire vive pour la session active.
+                </p>
+              </div>
+            </div>
+        </div>
+
         <div className="admin-card">
             <h2 className="admin-card-title">Services Coeur & Intégrations</h2>
             <div className="admin-card-content">

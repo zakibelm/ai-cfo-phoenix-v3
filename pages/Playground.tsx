@@ -101,6 +101,14 @@ const availableModels = [
 
 const Playground: React.FC<PlaygroundProps> = ({ ragContext, setRagContext }) => {
   const { trackQuery, trackAgentResponse, trackError, trackChatUpload } = useAnalytics();
+  
+  useEffect(() => {
+    document.body.classList.add('phoenix-active');
+    return () => {
+      document.body.classList.remove('phoenix-active');
+    };
+  }, []);
+
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -401,7 +409,8 @@ const Playground: React.FC<PlaygroundProps> = ({ ragContext, setRagContext }) =>
   }
 
   return (
-    <div className="page-container playground-container">
+    <div className="phoenix-layout">
+      <div className="page-container playground-container">
       <div className="playground-header">
         <div>
           <h1 className="page-title">Chat</h1>
@@ -570,7 +579,8 @@ const Playground: React.FC<PlaygroundProps> = ({ ragContext, setRagContext }) =>
             </button>
             </form>
             </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

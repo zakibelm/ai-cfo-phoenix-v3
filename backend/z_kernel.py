@@ -18,6 +18,7 @@ import asyncio
 import json
 import os
 import uuid
+from collections.abc import AsyncIterator
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -208,9 +209,74 @@ async def call_llm(
         return f"[LLM exception] {e}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Orchestrateur principal
-# ─────────────────────────────────────────────────────────────────────────────
+async def call_llm_stream(
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    max_tokens: int = 2500,
+    temperature: float = 0.6,
+    sensibilite: str = "professionnel",
+) -> AsyncIterator[str]:
+    """
+    Version streaming de call_llm. 
+    Enforce Loi 25 : les données 'confidentiel-client' passent par Ollama local.
+    """
+    # ───── 1. Ingestion / Scrubbing ─────
+    if sensibilite == "confidentiel-client":
+        scrubbed_user, _ = scrub_text(user_prompt, level=ScrubLevel.STRICT)
+        # TODO: Implémenter call_ollama_stream dans ollama_client
+        # Pour l'instant fallback non-stream
+        resp = await call_ollama(model=None, system_prompt=system_prompt, user_prompt=scrubbed_user)
+        yield resp
+        return
+
+    if sensibilite == "professionnel":
+        user_prompt, _ = scrub_text(user_prompt, level=ScrubLevel.MEDIUM)
+    elif sensibilite == "public":
+        user_prompt, _ = scrub_text(user_prompt, level=ScrubLevel.LIGHT)
+
+    # ───── 2. OpenRouter Streaming ─────
+    if not OPENROUTER_API_KEY:
+        yield "[LLM stream stub — API KEY manquante]"
+        return
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream(
+                "POST", OPENROUTER_URL, 
+                json=payload, 
+                headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"}
+            ) as resp:
+                if resp.status_code != 200:
+                    yield f"[LLM error {resp.status_code}]"
+                    return
+                
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data_str = line[6:].strip()
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        data = json.loads(data_str)
+                        content = data["choices"][0]["delta"].get("content", "")
+                        if content:
+                            yield content
+                    except (json.JSONDecodeError, KeyError):
+                        continue
+    except Exception as e:
+        yield f"[LLM exception] {e}"
 
 class CFOZKernel:
     """

@@ -7,7 +7,7 @@
  * Architecture : types en haut, API helpers, sous-composants, composant principal.
  */
 
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gsap } from 'gsap';
 import Banner from '../components/Banner';
@@ -586,7 +586,7 @@ const KnowledgeBase: React.FC = () => {
         setProgresses(prev => prev.map(p => p.status === 'uploading'
           ? { ...p, progress: Math.min(p.progress + Math.random() * 18, 95) } : p));
       }, 250);
-      const result = await kbIngest(files, bulk, refinements);
+      await kbIngest(files, bulk, refinements);
       clearInterval(interval);
       setProgresses(prev => prev.map(p => ({ ...p, status: 'indexed', progress: 100 })));
       queryClient.invalidateQueries({ queryKey: ['kb-docs'] });
@@ -622,9 +622,10 @@ const KnowledgeBase: React.FC = () => {
   return (
     <div ref={pageRef} className="page-container kb-page">
       <div className="kb-hero">
-        <h1 className="kb-page-title">📚 Knowledge Base</h1>
+        <h1 className="kb-page-title">📚 Expertise Métier</h1>
         <p className="kb-page-subtitle">
-          Injecter, gérer et tracer les documents-source consommés par les agents (chat) et par le pipeline CFO Knowledge Factory.
+          Base de connaissances partagée : lois, règlements, normes (IFRS/NCECF) et doctrine fiscale. 
+          Ces documents constituent le socle de compétences de vos agents IA.
         </p>
       </div>
 
@@ -820,7 +821,7 @@ const KnowledgeBase: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {docs.map((d, idx) => (
+                  {docs.map((d) => (
                     <tr key={d.doc_id} className={selectedIds.has(d.doc_id) ? 'selected' : ''}>
                       <td className="kb-cb-cell">
                         <input type="checkbox" checked={selectedIds.has(d.doc_id)} onChange={() => toggleSel(d.doc_id)} />

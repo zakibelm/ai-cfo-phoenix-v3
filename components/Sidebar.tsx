@@ -15,9 +15,9 @@ import { NavLink, useLocation } from 'react-router-dom';
 
 const navLinks = [
   { path: '/', label: 'Tableau de Bord', icon: DashboardIcon },
-  { path: '/kb', label: 'Knowledge Base', icon: KnowledgeBaseIcon },
+  { path: '/kb', label: 'Expertise Métier', icon: KnowledgeBaseIcon },
   { path: '/factory', label: 'Knowledge Factory', icon: FactoryIcon },
-  { path: '/rag', label: 'Base RAG (legacy)', icon: RagIcon },
+  { path: '/rag', label: 'Dossiers Clients', icon: RagIcon },
   { path: '/chat', label: 'Chat', icon: PlaygroundIcon },
   { type: 'divider' as const },
   { path: '/agents', label: 'Gestion des Agents', icon: AgentManagementIcon },

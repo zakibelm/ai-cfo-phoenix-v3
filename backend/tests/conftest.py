@@ -1,15 +1,14 @@
-"""Fixtures communes pour tous les tests (ZAKI OS — Z12 AI CFO Suite)."""
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
+import pytest
+
 # Ajoute backend/ au PYTHONPATH pour que les imports absolus fonctionnent
 _BACKEND_DIR = Path(__file__).parent.parent
 if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
-
-import pytest
 
 
 @pytest.fixture

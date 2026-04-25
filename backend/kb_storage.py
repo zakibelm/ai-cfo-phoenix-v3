@@ -58,6 +58,41 @@ def get_conn():
 # CRUD Knowledge Docs
 # ─────────────────────────────────────────────────────────────────────────────
 
+def vector_search(embedding: list[float], limit: int = 5, min_score: float = 0.5) -> list[dict]:
+    """Recherche sémantique via pgvector."""
+    conn = get_conn()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                # pgvector <=> est la distance cosinus (1 - similarity)
+                # On veut similarity > min_score <=> 1 - distance > min_score <=> distance < 1 - min_score
+                max_dist = 1.0 - min_score
+                cur.execute(
+                    """
+                    SELECT doc_id, filename, filepath, domaine, fiscal_year, sensibilite, doc_type, tags, text_excerpt,
+                           (1 - (embedding <=> %s::vector)) as similarity
+                    FROM cfo_knowledge_docs
+                    WHERE embedding IS NOT NULL
+                    ORDER BY embedding <=> %s::vector
+                    LIMIT %s
+                    """,
+                    (str(embedding), str(embedding), limit)
+                )
+                results = cur.fetchall()
+                # Filtrer par score minimum si nécessaire
+                return [r for r in results if r.get("similarity", 0) >= min_score]
+        except Exception as e:
+            print(f"[WARN] Vector search failed: {e}")
+        finally:
+            conn.close()
+
+    # Fallback : recherche par mots-clés simple sur le JSON local (très basique)
+    with _lock:
+        docs = _load(_DOCS_FILE)
+        # On ne peut pas vraiment faire de sémantique sans vecteur en local
+        # On retourne juste les derniers pour ne pas bloquer l'UI
+        return docs[:limit]
+
 def insert_kb_doc(doc: dict) -> dict:
     doc.setdefault("doc_id", str(uuid.uuid4()))
     doc.setdefault("uploaded_at", datetime.utcnow().isoformat())
