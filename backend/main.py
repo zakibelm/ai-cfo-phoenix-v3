@@ -16,7 +16,8 @@ from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from pydantic import BaseModel
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -29,6 +30,7 @@ from z_kernel import call_llm, call_llm_stream, select_model
 from kb_storage import vector_search
 from kb_ingest import generate_embedding
 from security_pii import scrub_text, ScrubLevel
+from auth_google import router as auth_router
 
 # Encodage UTF-8 sous Windows
 if sys.platform == "win32":
@@ -79,6 +81,13 @@ app.add_middleware(
 try:
     from cfo_kf_routes import router as cfo_kf_router
     app.include_router(cfo_kf_router)
+    app.include_router(auth_router)
+    try:
+        from auth_local import router as auth_local_router
+        app.include_router(auth_local_router)
+        print("[INFO] Local auth router mounted")
+    except Exception as _el:
+        print(f"[WARN] auth_local not loaded: {_el}")
     print("[INFO] CFO Knowledge Factory router mounted at /api/knowledge/* and /api/cfo-kf/*")
 except Exception as _e:
     print(f"[WARN] CFO Knowledge Factory router not loaded: {_e}")
@@ -401,6 +410,55 @@ async def stream_query(payload: dict):
 # ─────────────────────────────────────────────────────────────────────────────
 # Entrypoint
 # ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────
+# Proxy /api/chat → OpenRouter (clé côté serveur, jamais exposée)
+# ─────────────────────────────────────────────────────────────
+
+class ChatRequest(BaseModel):
+    model: str = DEFAULT_MODEL
+    messages: list
+    max_tokens: int = 1400
+    plugins: list = []
+    stream: bool = False
+
+@app.post("/api/chat", status_code=200)
+async def chat_proxy(payload: ChatRequest, request: Request):
+    """
+    Proxy vers OpenRouter. Utilise OPENROUTER_API_KEY (serveur).
+    Fallback: X-API-Key header envoyé par le client (legacy).
+    """
+    # Priorité 1 : clé serveur dans l'environnement
+    api_key = OPENROUTER_API_KEY
+    # Priorité 2 : clé transmise par le client (header X-API-Key)
+    if not api_key:
+        api_key = request.headers.get("X-API-Key", "")
+    if not api_key:
+        raise HTTPException(status_code=401, detail="Clé API OpenRouter manquante. Configurez OPENROUTER_API_KEY dans le fichier .env du serveur.")
+
+    body = {
+        "model": payload.model,
+        "messages": payload.messages,
+        "max_tokens": payload.max_tokens,
+    }
+    if payload.plugins:
+        body["plugins"] = payload.plugins
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        resp = await client.post(
+            OPENROUTER_API_URL,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://cfo.optigenius.pro",
+                "X-Title": "Z12 AI CFO Suite",
+            },
+            json=body,
+        )
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    return resp.json()
+
 
 if __name__ == "__main__":
     import uvicorn
