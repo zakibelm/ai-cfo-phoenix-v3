@@ -114,7 +114,11 @@ async def ingest_file(
     Retourne le KnowledgeDoc créé.
     """
     # Merge bulk + refinement (refinement override)
-    meta = dict(bulk_metadata)
+    # Normalise bulk_metadata: accepte liste [{...}] ou dict {...}
+    if isinstance(bulk_metadata, list):
+        meta = bulk_metadata[0].copy() if bulk_metadata else {}
+    else:
+        meta = dict(bulk_metadata)
     if file_refinement:
         for k, v in file_refinement.items():
             if v is not None:
@@ -122,7 +126,8 @@ async def ingest_file(
 
     # Extract text
     try:
-        text_content = extract_text_from_file(str(file_path))
+        file_bytes = open(str(file_path), "rb").read()
+        text_content = extract_text_from_file(file_bytes, original_filename)
     except (OSError, ValueError, RuntimeError) as e:
         print(f"[WARN] Text extraction failed for {original_filename}: {e}")
         text_content = ""

@@ -2,18 +2,15 @@ version: '3.8'
 
 services:
   db:
-    image: pgvector/pgvector:16
+    image: pgvector/pgvector:pg16
     restart: always
     environment:
       POSTGRES_USER: ai_cfo
       POSTGRES_PASSWORD: ai_cfo_password
       POSTGRES_DB: ai_cfo_db
-    ports:
-      - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      # Mount supabase migrations to auto-initialize the database
-      - ./supabase/migrations:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
 
   backend:
     build: ./backend
@@ -21,12 +18,23 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - /opt:/host_opt
+      - /var/www:/host_www
+    env_file:
+      - ./.env
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://ai_cfo:ai_cfo_password@db:5432/ai_cfo_db
     depends_on:
       - db
-    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        pip install bcrypt passlib[bcrypt] --quiet
+        sleep 3
+        echo aW1wb3J0IHBzeWNvcGcsb3MsdGltZQpkYj1vcy5lbnZpcm9uLmdldCgiREFUQUJBU0VfVVJMIiwicG9zdGdyZXNxbDovL2FpX2NmbzphaV9jZm9fcGFzc3dvcmRAZGI6NTQzMi9haV9jZm9fZGIiKQpzcWxzPVsKIkNSRUFURSBUQUJMRSBJRiBOT1QgRVhJU1RTIGxvY2FsX3VzZXJzIChpZCBTRVJJQUwgUFJJTUFSWSBLRVksIGVtYWlsIFZBUkNIQVIoMjU1KSBVTklRVUUgTk9UIE5VTEwsIG5hbWUgVkFSQ0hBUigyNTUpLCBwaWN0dXJlX3VybCBURVhULCBwYXNzd29yZF9oYXNoIFZBUkNIQVIoMjU1KSBOT1QgTlVMTCwgaXNfYWN0aXZlIEJPT0xFQU4gREVGQVVMVCBUUlVFLCBjcmVhdGVkX2F0IFRJTUVTVEFNUCBERUZBVUxUIENVUlJFTlRfVElNRVNUQU1QKSIsCiJDUkVBVEUgVEFCTEUgSUYgTk9UIEVYSVNUUyB1c2VyX3Nlc3Npb25zIChpZCBTRVJJQUwgUFJJTUFSWSBLRVksIHVzZXJfaWQgSU5URUdFUiBSRUZFUkVOQ0VTIGxvY2FsX3VzZXJzKGlkKSBPTiBERUxFVEUgQ0FTQ0FERSwgdG9rZW4gVkFSQ0hBUig1MTIpIFVOSVFVRSBOT1QgTlVMTCwganRpIFZBUkNIQVIoMjU1KSBVTklRVUUsIGNyZWF0ZWRfYXQgVElNRVNUQU1QIERFRkFVTFQgQ1VSUkVOVF9USU1FU1RBTVAsIGV4cGlyZXNfYXQgVElNRVNUQU1QLCBpc19hY3RpdmUgQk9PTEVBTiBERUZBVUxUIFRSVUUpIiwKIkFMVEVSIFRBQkxFIHVzZXJfc2Vzc2lvbnMgQUREIENPTFVNTiBJRiBOT1QgRVhJU1RTIGp0aSBWQVJDSEFSKDI1NSkgVU5JUVVFIiwKIkNSRUFURSBUQUJMRSBJRiBOT1QgRVhJU1RTIGdvb2dsZV91c2VycyAoaWQgU0VSSUFMIFBSSU1BUlkgS0VZLCBnb29nbGVfaWQgVkFSQ0hBUigyNTUpIFVOSVFVRSBOT1QgTlVMTCwgZW1haWwgVkFSQ0hBUigyNTUpIFVOSVFVRSBOT1QgTlVMTCwgbmFtZSBWQVJDSEFSKDI1NSksIHBpY3R1cmVfdXJsIFRFWFQsIGNyZWF0ZWRfYXQgVElNRVNUQU1QIERFRkFVTFQgQ1VSUkVOVF9USU1FU1RBTVApIgpdCmZvciBpIGluIHJhbmdlKDEwKToKIHRyeToKICBjPXBzeWNvcGcuY29ubmVjdChkYik7Yy5hdXRvY29tbWl0PVRydWU7Y3VyPWMuY3Vyc29yKCkKICBmb3Igc3FsIGluIHNxbHM6CiAgIHRyeToKICAgIGN1ci5leGVjdXRlKHNxbCk7cHJpbnQoIltPS10gIitzcWxbOjYwXSkKICAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlMjoKICAgIHByaW50KCJbU0tJUF0gIitzdHIoZTIpWzo2MF0pCiAgYy5jbG9zZSgpO2JyZWFrCiBleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgcHJpbnQoZiJbe2l9XSB7ZX0iKTt0aW1lLnNsZWVwKDMpCg== | base64 -d > /tmp/init_db.py
+        python /app/init_db_rag.py
+        exec uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
-  pgdata:
+  postgres_data:
